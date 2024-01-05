@@ -1,0 +1,71 @@
+{
+  "name": "@ibyra/ipe",
+  "version": "0.0.1",
+  "author": "Ibyra",
+  "description": "A set of headless web components.",
+  "license": "MIT",
+  "type": "module",
+  "main": "dist/index.js",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ibyra/ipe.git"
+  },
+  "keywords": [
+    "javascript",
+    "typescript",
+    "webcomponents"
+  ],
+  "bugs": {
+    "url": "https://github.com/ibyra/ipe/issues"
+  },
+  "homepage": "https://github.com/ibyra/ipe#readme",
+  "scripts": {
+    "test": "bun test --coverage",
+    "clean": "rm -rf dist",
+    "build": "tsup src/index.ts --format esm --dts",
+    "ignore-sync": "ignore-sync .",
+    "lint": "eslint src/**/*.ts",
+    "types": "tsc -p ./tsconfig.json",
+    "format": "prettier ./src/**/*.ts --write",
+    "docs": "typedoc src/index.ts --plugin typedoc-plugin-markdown --disableSources --readme none",
+    "release": "bun run build && changeset publish"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "bun": ">=1.0.20"
+  },
+  "devDependencies": {
+    "@changesets/cli": "^2.26.2",
+    "@types/bun": "latest",
+    "@typescript-eslint/eslint-plugin": "^6.17.0",
+    "@typescript-eslint/parser": "^6.17.0",
+    "bun-plugin-dts": "^0.2.1",
+    "eslint": "^8.56.0",
+    "eslint-config-prettier": "^9.1.0",
+    "eslint-plugin-prettier": "^5.1.2",
+    "eslint-plugin-wc": "^2.0.4",
+    "ignore-sync": "^7.0.1",
+    "prettier": "^3.1.1",
+    "tsup": "^8.0.1",
+    "typedoc": "^0.25.3",
+    "typedoc-plugin-markdown": "^3.17.1",
+    "typescript": "^5.3.3"
+  },
+  "peerDependencies": {
+    "typescript": "^5.3.3"
+  }
+}
