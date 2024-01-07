@@ -1,3 +1,12 @@
+import type {
+  HTMLAccordion,
+  HTMLButton,
+  HTMLDisclosure,
+  HTMLOpenable,
+  HTMLOption,
+  HTMLOptlist,
+} from './dom';
+
 /**
  * Returns `true` if the value is a boolean, `false` otherwise.
  * @param value
@@ -50,6 +59,7 @@ export function isObject(
 
 /**
  * Returns `true` if the value is an Element, `false` otherwise.
+ * @param value
  */
 export function isElement(value: unknown): value is Element {
   return isObject(value) && value instanceof Element;
@@ -64,10 +74,9 @@ export function isHTMLElement(value: unknown): value is HTMLElement {
 
 /**
  * Returns `true` if the value is an HTML button element, `false` otherwise.
+ * @param value
  */
-export function isHTMLButton(
-  value: unknown,
-): value is HTMLButtonElement | HTMLInputElement {
+export function isHTMLButton(value: unknown): value is HTMLButton {
   return (
     isObject(value) &&
     (value instanceof HTMLButtonElement ||
@@ -76,4 +85,66 @@ export function isHTMLButton(
           value.type === 'submit' ||
           value.type === 'reset')))
   );
+}
+
+/**
+ * Returns `true` if the value is an HTML option, `false` otherwise.
+ * @param value
+ */
+export function isHTMLOption(value: unknown): value is HTMLOption {
+  return isHTMLElement(value) && 'selected' in value && 'disabled' in value;
+}
+
+/**
+ * Returns `true` if the value is an HTML option list, `false` otherwise.
+ * @param value
+ */
+export function isHTMLOptlist(value: unknown): value is HTMLOptlist {
+  return (
+    isHTMLElement(value) &&
+    'disabled' in value &&
+    'multiple' in value &&
+    'clearable' in value &&
+    'options' in value &&
+    'selectedOption' in value &&
+    'selectedOptions' in value &&
+    'toggle' in value &&
+    'select' in value &&
+    'deselect' in value &&
+    'first' in value &&
+    'last' in value &&
+    'next' in value &&
+    'previous' in value &&
+    typeof value.toggle === 'function' &&
+    typeof value.select === 'function' &&
+    typeof value.deselect === 'function' &&
+    typeof value.first === 'function' &&
+    typeof value.last === 'function' &&
+    typeof value.next === 'function' &&
+    typeof value.previous === 'function'
+  );
+}
+
+/**
+ * Returns `true` if the value is an HTML openable, `false` otherwise.
+ * @param value
+ */
+export function isHTMLOpenable(value: unknown): value is HTMLOpenable {
+  return isHTMLElement(value) && 'open' in value;
+}
+
+/**
+ * Returns `true` if the value is an HTML disclosure, `false` otherwise.
+ * @param value
+ */
+export function isHTMLDisclosure(value: unknown): value is HTMLDisclosure {
+  return isHTMLOption(value) && isHTMLOpenable(value) && 'summaries' in value;
+}
+
+/**
+ * Returns `true` if the value is an HTML accordion, `false` otherwise.
+ * @param value
+ */
+export function isHTMLAccordion(value: unknown): value is HTMLAccordion {
+  return isHTMLOptlist(value);
 }

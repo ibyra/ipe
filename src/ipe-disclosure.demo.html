@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>IpeDisclosure demo</title>
+
+    <link rel="stylesheet" href="https://unpkg.com/missing.css@1.1.1" />
+    <style>
+      ipe-disclosure {
+        display: block;
+        background-color: var(--box-bg);
+        overflow: hidden;
+        line-height: 1;
+      }
+      ipe-disclosure::part(content) {
+        display: none;
+      }
+      ipe-disclosure[open]::part(content) {
+        display: unset;
+      }
+    </style>
+    <script type="module" src="./ipe-disclosure.ts"></script>
+  </head>
+  <body>
+    <main>
+      <h1><code>ipe-disclosure</code> demo</h1>
+      <ipe-disclosure>
+        <template shadowrootmode="open">
+          <slot name="summary" part="summary"></slot>
+          <slot part="content"></slot>
+        </template>
+        <button slot="summary">Summary</button>
+        <p>
+          Lorem ipsum dolor sit amet consectetur adipisicing elit. Recusandae
+          labore similique velit veniam et ullam eius voluptate voluptas
+          doloremque repellat repellendus nulla eum nam consequuntur minus
+          mollitia, cum blanditiis officia.
+        </p>
+      </ipe-disclosure>
+    </main>
+  </body>
+</html>
