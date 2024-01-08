@@ -9,6 +9,8 @@ import { IpeElement } from './ipe-element';
 // TODO: Add support for "role=button" to be a summary
 
 export class IpeDisclosureElement extends IpeElement implements HTMLDisclosure {
+  protected _idAttr = new StringAttr(this, 'id', '');
+
   protected _open: boolean = false;
   protected _openAttr = new BooleanAttr(this, 'open', false);
 
@@ -142,26 +144,27 @@ export class IpeDisclosureElement extends IpeElement implements HTMLDisclosure {
     newValue: string | null,
   ): void {
     super.attributeChangedCallback(name, oldValue, newValue);
-    if (name === 'id') {
-      if (!this.changeId(newValue ?? '')) return;
+    if (name === this._idAttr.name) {
+      const id = this._idAttr.from(newValue);
+      if (!this.changeId(id)) return;
     }
-    if (name === 'disabled') {
+    if (name === this._disabledAttr.name) {
       const disabled = this._disabledAttr.from(newValue);
       if (!this.changeDisabled(disabled)) return;
     }
-    if (name === 'open') {
+    if (name === this._openAttr.name) {
       const open = this._openAttr.from(newValue);
       if (!this.changeOpen(open)) return;
     }
-    if (name === 'duration') {
+    if (name === this._durationAttr.name) {
       const duration = this._durationAttr.from(newValue);
       if (!this.changeDuration(duration)) return;
     }
-    if (name === 'delay') {
+    if (name === this._delayAttr.name) {
       const delay = this._delayAttr.from(newValue);
       if (!this.changeDelay(delay)) return;
     }
-    if (name === 'easing') {
+    if (name === this._easingAttr.name) {
       const easing = this._easingAttr.from(newValue);
       if (!this.changeEasing(easing)) return;
     }
