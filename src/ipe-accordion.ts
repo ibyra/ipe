@@ -1,22 +1,25 @@
 import { isEqual } from 'moderndash';
 import { BooleanAttr } from './attributes';
 import { isBoolean, isHTMLDisclosure } from './commons';
-import { type HTMLAccordion, type HTMLDisclosure } from './dom';
+import { type HTMLOptlist, type HTMLDisclosure } from './dom';
 import { IpeElement } from './ipe-element';
 
 // TODO: Implement min/max length, that allows the number of open items
 
 // TODO: Add "orientation" to allow horizontal accordions
 
-export class IpeAccordionElement extends IpeElement implements HTMLAccordion {
+export class IpeAccordionElement
+  extends IpeElement
+  implements HTMLOptlist<HTMLDisclosure>
+{
   protected _disabled = false;
   protected _disabledAttr = new BooleanAttr(this, 'disabled', false);
 
   protected _multiple = false;
   protected _multipleAttr = new BooleanAttr(this, 'multiple', false);
 
-  protected _clearable = false;
-  protected _clearableAttr = new BooleanAttr(this, 'clearable', false);
+  protected _required = false;
+  protected _requiredAttr = new BooleanAttr(this, 'required', false);
 
   protected _options = [] as ReadonlyArray<HTMLDisclosure>;
 
@@ -42,12 +45,12 @@ export class IpeAccordionElement extends IpeElement implements HTMLAccordion {
     if (!this.changeMultiple(value)) return;
   }
 
-  get clearable(): boolean {
-    return this._clearable;
+  get required(): boolean {
+    return this._required;
   }
-  set clearable(value: boolean) {
+  set required(value: boolean) {
     if (!isBoolean(Boolean)) return;
-    if (!this.changeClearable(value)) return;
+    if (!this.changeRequired(value)) return;
   }
 
   get options(): Array<HTMLDisclosure> {
@@ -101,7 +104,7 @@ export class IpeAccordionElement extends IpeElement implements HTMLAccordion {
     super.initProperties();
     this.changeDisabled(this._disabledAttr.get());
     this.changeMultiple(this._multipleAttr.get());
-    this.changeClearable(this._clearableAttr.get());
+    this.changeRequired(this._requiredAttr.get());
   }
 
   protected override holdSlots(): void {
@@ -135,17 +138,17 @@ export class IpeAccordionElement extends IpeElement implements HTMLAccordion {
     newValue: string | null,
   ): void {
     super.attributeChangedCallback(name, oldValue, newValue);
-    if (name === 'disabled') {
+    if (name === this._disabledAttr.name) {
       const disabled = this._disabledAttr.from(newValue);
       if (!this.changeDisabled(disabled)) return;
     }
-    if (name === 'multiple') {
+    if (name === this._multipleAttr.name) {
       const multiple = this._multipleAttr.from(newValue);
       if (!this.changeMultiple(multiple)) return;
     }
-    if (name === 'clearable') {
-      const clearable = this._clearableAttr.from(newValue);
-      if (!this.changeClearable(clearable)) return;
+    if (name === this._requiredAttr.name) {
+      const required = this._requiredAttr.from(newValue);
+      if (!this.changeRequired(required)) return;
     }
   }
 
@@ -187,11 +190,11 @@ export class IpeAccordionElement extends IpeElement implements HTMLAccordion {
     return true;
   }
 
-  protected changeClearable(newValue: boolean): boolean {
-    const oldValue = this._clearable;
+  protected changeRequired(newValue: boolean): boolean {
+    const oldValue = this._required;
     if (newValue === oldValue) return false;
-    this._clearable = newValue;
-    this._clearableAttr.set(newValue);
+    this._required = newValue;
+    this._requiredAttr.set(newValue);
     return true;
   }
 
@@ -305,7 +308,7 @@ export class IpeAccordionElement extends IpeElement implements HTMLAccordion {
 
   protected handleOptionBeforeToggle(event: ToggleEvent): void {
     if (event.newState !== 'closed') return;
-    if (this._clearable) return;
+    if (!this._required) return;
     if (this.selectedOptions.length > 1) return;
     event.preventDefault();
   }
@@ -320,7 +323,7 @@ export class IpeAccordionElement extends IpeElement implements HTMLAccordion {
   }
 
   static override get observedAttributes(): Array<string> {
-    return ['disabled', 'multiple', 'clearable'];
+    return ['disabled', 'multiple', 'required'];
   }
 
   protected static keys = ['Home', 'End', 'ArrowDown', 'ArrowUp'];

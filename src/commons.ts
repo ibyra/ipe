@@ -1,5 +1,4 @@
 import type {
-  HTMLAccordion,
   HTMLButton,
   HTMLDisclosure,
   HTMLOpenable,
@@ -104,7 +103,7 @@ export function isHTMLOptlist(value: unknown): value is HTMLOptlist {
     isHTMLElement(value) &&
     'disabled' in value &&
     'multiple' in value &&
-    'clearable' in value &&
+    'required' in value &&
     'options' in value &&
     'selectedOption' in value &&
     'selectedOptions' in value &&
@@ -139,12 +138,4 @@ export function isHTMLOpenable(value: unknown): value is HTMLOpenable {
  */
 export function isHTMLDisclosure(value: unknown): value is HTMLDisclosure {
   return isHTMLOption(value) && isHTMLOpenable(value) && 'summaries' in value;
-}
-
-/**
- * Returns `true` if the value is an HTML accordion, `false` otherwise.
- * @param value
- */
-export function isHTMLAccordion(value: unknown): value is HTMLAccordion {
-  return isHTMLOptlist(value);
 }

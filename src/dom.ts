@@ -60,11 +60,10 @@ export interface HTMLOptlist<T extends HTMLOption = HTMLOption>
   multiple: boolean;
 
   /**
-   * The clearable state of the option list. If `true`, the user can deselect
-   * all the options of the list. If `false`, the user can deselect all the
-   * options but one.
+   * The required state of the option list. If `true`, once a disclose happens,
+   * the user will not be able to close all the elements.
    */
-  clearable: boolean;
+  required: boolean;
 
   /**
    * An array of references of the options of this list.
@@ -145,12 +144,4 @@ export interface HTMLDisclosure extends HTMLOption, HTMLOpenable {
    * An array of references of all the summaries of this disclosure.
    */
   summaries: Array<Element>;
-}
-
-/**
- * Represents an HTML element that contains a list of disclosures that can be
- * open/closed.
- */
-export interface HTMLAccordion extends HTMLOptlist<HTMLDisclosure> {
-  clearable: boolean;
 }
