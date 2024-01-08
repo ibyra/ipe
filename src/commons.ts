@@ -91,7 +91,17 @@ export function isHTMLButton(value: unknown): value is HTMLButton {
  * @param value
  */
 export function isHTMLOption(value: unknown): value is HTMLOption {
-  return isHTMLElement(value) && 'selected' in value && 'disabled' in value;
+  return (
+    isHTMLElement(value) &&
+    'selected' in value &&
+    'disabled' in value &&
+    'toggle' in value &&
+    'select' in value &&
+    'deselect' in value &&
+    typeof value.toggle === 'function' &&
+    typeof value.select === 'function' &&
+    typeof value.deselect === 'function'
+  );
 }
 
 /**
