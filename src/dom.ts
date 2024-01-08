@@ -145,3 +145,76 @@ export interface HTMLDisclosure extends HTMLOption, HTMLOpenable {
    */
   summaries: Array<Element>;
 }
+
+/**
+ * Represents a HTML element that can be used as a control with a HTML form.
+ */
+export interface HTMLFormControl extends HTMLElement {
+  /**
+   * A reference for the form element, or `null` if no form is associated.
+   */
+  readonly form: HTMLFormElement | null;
+
+  /**
+   * Returns a NodeList of the <label> elements associated with the control.
+   */
+  readonly labels: NodeList;
+
+  /**
+   * Returns whether an element will successfully validate based on forms
+   * validation rules and constraints.
+   */
+  readonly willValidate: boolean;
+
+  /**
+   * Returns the error message that would be displayed if the user submits the
+   * form, or an empty string if no error message. It also triggers the standard
+   * error message, such as "this is a required field". The result is that the
+   * user sees validation messages without actually submitting.
+   */
+  readonly validationMessage: string;
+
+  /**
+   * Returns a `ValidityState` object that represents the validity states of an
+   * element.
+   */
+  readonly validity: ValidityState;
+
+  /**
+   * Returns `true` if the control meets any constraint validation rules applied
+   * to it. Upon returning `false`, this method will also dispatch an `invalid`
+   * event. This method behaves in a similar way to `reportValidity`, however
+   * it does not sends the value of `validationMessage` to the user agent for
+   * display.
+   *
+   * @see {validationMessage}
+   * @see {reportValidity}
+   */
+  checkValidity(): boolean;
+
+  /**
+   * Returns `true` if the control meets any constraint validation rules applied
+   * to it. Upon returning `false`, this method will also dispatch an `invalid`
+   * event. This method behaves in a similar way to `checkValidity`, however
+   * it additionally sends the value of `validationMessage` to the user agent
+   * for display.
+   *
+   * @see {validationMessage}
+   * @see {checkValidity}
+   */
+  reportValidity(): boolean;
+
+  /**
+   * Sets a validity of the `customError` constraint. If an empty string is
+   * given, `customError` is valid. Otherwise, the constraint is invalid and
+   * the string is also set as `validationMessage`.
+   *
+   * @see {validationMessage}
+   * @see {ValidityState.customError}
+   *
+   * @param errormessage the error message.
+   */
+  setCustomValidity(errormessage: string): void;
+}
+
+export type Checked = 'true' | 'false' | 'mixed';

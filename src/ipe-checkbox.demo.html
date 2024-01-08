@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>IpeDisclosure demo</title>
+
+    <link rel="stylesheet" href="https://unpkg.com/missing.css@1.1.1" />
+    <style>
+      ipe-checkbox {
+        display: inline-block;
+        height: 1.125em;
+        width: 1.125em;
+        background-color: var(--interactive-bg);
+        border: solid 2px var(--graphical-fg);
+        border-radius: 0.125em;
+        overflow: hidden;
+        vertical-align: middle;
+        line-height: 1;
+      }
+      ipe-checkbox[aria-checked='true'] {
+        background-color: var(--accent);
+      }
+      ipe-checkbox[aria-checked='mixed'] {
+        background-color: var(--muted-accent);
+      }
+      ipe-checkbox[aria-invalid='true'] {
+        background-color: var(--bad-bg);
+        border-color: var(--bad-graphical-fg);
+      }
+    </style>
+    <script type="module" src="./ipe-checkbox.ts"></script>
+  </head>
+  <body>
+    <main>
+      <h1><code>ipe-disclosure</code> demo</h1>
+      <form class="table rows">
+        <p>
+          <label for="agree">
+            <ipe-checkbox name="agree" value="yes" required></ipe-checkbox>
+            Do you agree?
+          </label>
+        </p>
+        <p>
+          <button type="submit">Submit</button>
+        </p>
+      </form>
+    </main>
+  </body>
+</html>

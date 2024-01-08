@@ -1,4 +1,5 @@
-import { isString } from './commons';
+import { isChecked, isString } from './commons';
+import type { Checked } from './dom';
 
 export abstract class Attr<E extends Element, D, T> {
   readonly element: E;
@@ -12,6 +13,12 @@ export abstract class Attr<E extends Element, D, T> {
   }
 
   /**
+   * Returns `true` if the given value is the default value.
+   * @param value
+   */
+  abstract isDefault(value: T): boolean;
+
+  /**
    * Returns the value of an attribute, or the default value, if it's `null`.
    * @param attribute
    */
@@ -22,12 +29,6 @@ export abstract class Attr<E extends Element, D, T> {
    * @param value
    */
   abstract to(value: T): string | null;
-
-  /**
-   * Returns `true` if the given value is the default value.
-   * @param value
-   */
-  abstract isDefault(value: T): boolean;
 
   /**
    * Returns an value of the attribute in the element.
@@ -167,5 +168,22 @@ export class IdRefAttr<E extends Element, D> extends Attr<
     if (value == null) return null;
     if (value.id === '') return null;
     return value.id;
+  }
+}
+
+export class CheckedAttr<E extends Element, D> extends Attr<E, D, Checked> {
+  override isDefault(value: Checked): boolean {
+    return this.defaultValue === value;
+  }
+
+  override from(attribute: string | null): Checked | D {
+    if (!isChecked(attribute)) return this.defaultValue;
+    return attribute;
+  }
+
+  override to(value: Checked): string | null {
+    if (!this.isDefault(value)) return null;
+    if (!isChecked(value)) return null;
+    return value;
   }
 }

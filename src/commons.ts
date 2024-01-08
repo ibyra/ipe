@@ -1,6 +1,8 @@
 import type {
+  Checked,
   HTMLButton,
   HTMLDisclosure,
+  HTMLFormControl,
   HTMLOpenable,
   HTMLOption,
   HTMLOptlist,
@@ -148,4 +150,34 @@ export function isHTMLOpenable(value: unknown): value is HTMLOpenable {
  */
 export function isHTMLDisclosure(value: unknown): value is HTMLDisclosure {
   return isHTMLOption(value) && isHTMLOpenable(value) && 'summaries' in value;
+}
+
+/**
+ * Returns `true` if the value is an HTML control, `false` otherwise.
+ * @param value
+ */
+export function isHTMLFormControl(value: unknown): value is HTMLFormControl {
+  return (
+    (isObject(value) &&
+      (value instanceof HTMLInputElement ||
+        value instanceof HTMLSelectElement ||
+        value instanceof HTMLTextAreaElement ||
+        value instanceof HTMLButtonElement)) ||
+    (isHTMLElement(value) &&
+      'form' in value &&
+      'labels' in value &&
+      'willValidate' in value &&
+      'validationMessage' in value &&
+      'validity' in value &&
+      'checkValidity' in value &&
+      'reportValidity' in value &&
+      'setCustomValidity' in value &&
+      typeof value.checkValidity === 'function' &&
+      typeof value.reportValidity === 'function' &&
+      typeof value.setCustomValidity === 'function')
+  );
+}
+
+export function isChecked(value: unknown): value is Checked {
+  return value === 'true' || value === 'false' || value === 'mixed';
 }
