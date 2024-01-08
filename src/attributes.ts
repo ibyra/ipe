@@ -122,7 +122,7 @@ export class FloatAttr<E extends Element, D> extends Attr<E, D, number> {
   }
 
   override to(value: number): string | null {
-    if (value === this.defaultValue) return null;
+    if (this.isDefault(value)) return null;
     if (!Number.isFinite(value)) return null;
     return value.toString(10);
   }
