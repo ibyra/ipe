@@ -60,6 +60,18 @@ export function isObject(
 }
 
 /**
+ * Returns `true` if the value is a iterable, `false` otherwise.
+ * @param value
+ */
+export function isIterable(value: unknown): value is Iterable<unknown> {
+  return (
+    isObject(value) &&
+    Symbol.iterator in value &&
+    typeof value[Symbol.iterator] !== 'function'
+  );
+}
+
+/**
  * Returns `true` if the value is an Element, `false` otherwise.
  * @param value
  */

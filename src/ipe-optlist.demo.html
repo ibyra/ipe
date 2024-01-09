@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>IpeOptlistElement demo</title>
+
+    <link rel="stylesheet" href="https://unpkg.com/missing.css@1.1.1" />
+    <style>
+      ipe-optlist {
+        display: flex;
+        flex-direction: column;
+        line-height: 1;
+      }
+      ipe-option {
+        display: inline-block;
+        padding: 0.25em;
+        vertical-align: middle;
+        line-height: 1;
+        cursor: pointer;
+      }
+      ipe-option[active] {
+        background-color: var(--box-bg);
+        color: var();
+      }
+      ipe-option[aria-selected='true'] {
+        background-color: var(--interactive-bg);
+      }
+    </style>
+    <script type="module" src="./ipe-optlist.ts"></script>
+    <script type="module" src="./ipe-option.ts"></script>
+  </head>
+  <body>
+    <main>
+      <h1><code>ipe-optlist</code> demo</h1>
+      <form class="table">
+        <p>
+          <label for="optlist">Select a fruit</label>
+          <ipe-optlist id="optlist">
+            <template shadowrootmode="open">
+              <slot></slot>
+            </template>
+            <ipe-option value="apple">Apple</ipe-option>
+            <ipe-option value="banana">Banana</ipe-option>
+            <ipe-option value="cranberry">Cranberry</ipe-option>
+          </ipe-optlist>
+        </p>
+        <p>
+          <button type="submit">Submit</button>
+        </p>
+      </form>
+    </main>
+  </body>
+</html>
