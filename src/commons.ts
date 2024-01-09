@@ -6,6 +6,7 @@ import type {
   HTMLOpenable,
   HTMLOption,
   HTMLOptlist,
+  HTMLValueOption,
 } from './dom';
 
 /**
@@ -103,6 +104,19 @@ export function isHTMLOption(value: unknown): value is HTMLOption {
     typeof value.toggle === 'function' &&
     typeof value.select === 'function' &&
     typeof value.deselect === 'function'
+  );
+}
+
+/**
+ * Returns `true` if the value is an HTML valued option, `false` otherwise.
+ * @param value
+ */
+export function isHTMLValueOption(value: unknown): value is HTMLValueOption {
+  return (
+    isHTMLOption(value) &&
+    'value' in value &&
+    'defaultValue' in value &&
+    'defaultSelected' in value
   );
 }
 

@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>IpeDisclosure demo</title>
+
+    <link rel="stylesheet" href="https://unpkg.com/missing.css@1.1.1" />
+    <style>
+      ipe-option {
+        display: inline-block;
+        padding: 0.25em;
+        border: solid 2px var(--graphical-fg);
+        border-radius: 0.125em;
+        overflow: hidden;
+        vertical-align: middle;
+        line-height: 1;
+        cursor: pointer;
+      }
+      ipe-option[aria-selected='true'] {
+        border: solid 2px var(--accent);
+      }
+    </style>
+    <script type="module" src="./ipe-option.ts"></script>
+  </head>
+  <body>
+    <main>
+      <h1><code>ipe-option</code> demo</h1>
+      <ipe-option>Toggle this!</ipe-option>
+    </main>
+  </body>
+</html>

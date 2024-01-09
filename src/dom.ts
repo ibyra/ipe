@@ -42,6 +42,26 @@ export interface HTMLOption extends HTMLElement {
 }
 
 /**
+ * Represents an HTML option that can have an value assigned to it.
+ */
+export interface HTMLValueOption extends HTMLOption {
+  /**
+   * The value of the option.
+   */
+  value: string;
+
+  /**
+   * The default value of the option.
+   */
+  defaultValue: string;
+
+  /**
+   * The default selection state of the option;
+   */
+  defaultSelected: boolean;
+}
+
+/**
  * Represents an HTML element that contains a list of options that can be
  * selected.
  */
