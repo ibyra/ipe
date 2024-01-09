@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>IpeFieldElement demo</title>
+
+    <link rel="stylesheet" href="https://unpkg.com/missing.css@1.1.1" />
+    <style>
+      ipe-field {
+        display: flex;
+        flex-direction: column;
+      }
+      .errormessage:empty {
+        display: none;
+      }
+      .errormessage {
+        color: var(--bad-fg);
+      }
+    </style>
+    <script type="module" src="./ipe-field.ts"></script>
+  </head>
+  <body>
+    <main>
+      <h1><code>ipe-field</code> demo</h1>
+      <form class="table">
+        <ipe-field>
+          <template shadowrootmode="open">
+            <slot></slot>
+          </template>
+          <label for="email">E-mail</label>
+          <input
+            id="email"
+            type="email"
+            name="email"
+            required
+            aria-errormessage="email-errormessage"
+            data-value-missing="Please, fill this with your e-mail."
+            data-type-mismatch="Please, inform a valid e-mail."
+          />
+          <small class="errormessage" id="email-errormessage"></small>
+        </ipe-field>
+        <ipe-field>
+          <template shadowrootmode="open">
+            <slot></slot>
+          </template>
+          <label for="password">Password</label>
+          <input
+            id="password"
+            type="password"
+            name="password"
+            required
+            aria-errormessage="password-errormessage"
+            data-value-missing="Please, fill this with your password."
+          />
+          <small class="errormessage" id="password-errormessage"></small>
+        </ipe-field>
+        <p>
+          <button type="submit">Submit</button>
+          <button type="reset">Reset</button>
+        </p>
+      </form>
+    </main>
+  </body>
+</html>
