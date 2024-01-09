@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>IpeTooltipElement demo</title>
+
+    <link rel="stylesheet" href="https://unpkg.com/missing.css@1.1.1" />
+    <style>
+      ipe-tooltip {
+        max-width: 300px;
+        margin: 0;
+        padding: 0.5em;
+        border: solid 1px var(--graphical-fg);
+        border-radius: 0.25em;
+        overflow: hidden;
+        line-height: 1;
+      }
+    </style>
+    <script type="module" src="./ipe-tooltip.ts"></script>
+  </head>
+  <body>
+    <main>
+      <h1><code>ipe-tooltip</code> demo</h1>
+      <p>
+        <u id="tooltip-html">HTML</u>
+        is the most basic building block of the
+        <u id="tooltip-www">WWW</u>.
+      </p>
+      <ipe-tooltip anchor="tooltip-html" inline>
+        HyperText Markup Language
+      </ipe-tooltip>
+      <ipe-tooltip anchor="tooltip-www" inline> World Wide Web </ipe-tooltip>
+    </main>
+  </body>
+</html>
