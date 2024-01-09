@@ -1,5 +1,5 @@
-import { isChecked, isString } from './commons';
-import type { Checked } from './dom';
+import { isChecked, isPlacement, isString } from './commons';
+import type { Checked, Placement } from './dom';
 
 export abstract class Attr<E extends Element, D, T> {
   readonly element: E;
@@ -185,5 +185,21 @@ export class CheckedAttr<E extends Element, D> extends Attr<E, D, Checked> {
     if (!this.isDefault(value)) return null;
     if (!isChecked(value)) return null;
     return value;
+  }
+}
+
+export class PlacementAttr<E extends Element, D> extends Attr<E, D, Placement> {
+  override from(attribute: string | null): D | Placement {
+    if (!isPlacement(attribute)) return this.defaultValue;
+    return attribute;
+  }
+  override to(value: Placement): string | null {
+    if (this.isDefault(value)) return null;
+    if (!isPlacement(value)) return null;
+    return value;
+  }
+
+  override isDefault(value: Placement): boolean {
+    return value === this.defaultValue;
   }
 }

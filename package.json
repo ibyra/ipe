@@ -50,6 +50,7 @@
     "bun": ">=1.0.20"
   },
   "dependencies": {
+    "@floating-ui/dom": "^1.5.4",
     "moderndash": "^3.9.0"
   },
   "devDependencies": {

@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>IpeFloatElement demo</title>
+
+    <link rel="stylesheet" href="https://unpkg.com/missing.css@1.1.1" />
+    <style>
+      ipe-float {
+        max-width: 300px;
+        margin: 0;
+        padding: 0.5em;
+        border: solid 1px var(--graphical-fg);
+        border-radius: 0.25em;
+        overflow: hidden;
+        line-height: 1;
+      }
+    </style>
+    <script type="module" src="./ipe-float.ts"></script>
+  </head>
+  <body>
+    <main>
+      <h1><code>ipe-float</code> demo</h1>
+      <button popovertarget="popover" id="button">An anchor</button>
+      <ipe-float id="popover" anchor="button" placement="left">
+        Lorem, ipsum dolor sit amet consectetur adipisicing elit. Explicabo
+        facere deserunt, possimus, quae labore delectus blanditiis quas,
+        exercitationem illo perspiciatis fugit similique porro incidunt quo
+        saepe consequatur dolore eos molestiae.
+      </ipe-float>
+    </main>
+  </body>
+</html>

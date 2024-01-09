@@ -1,4 +1,6 @@
 import type {
+  Alignment,
+  AlignedPlacement,
   Checked,
   HTMLButton,
   HTMLDisclosure,
@@ -7,6 +9,8 @@ import type {
   HTMLOption,
   HTMLOptlist,
   HTMLValueOption,
+  Side,
+  Placement,
 } from './dom';
 
 /**
@@ -206,4 +210,34 @@ export function isHTMLFormControl(value: unknown): value is HTMLFormControl {
 
 export function isChecked(value: unknown): value is Checked {
   return value === 'true' || value === 'false' || value === 'mixed';
+}
+
+export function isAlignment(value: unknown): value is Alignment {
+  return value === 'start' || value === 'end';
+}
+
+export function isSide(value: unknown): value is Side {
+  return (
+    value === 'top' ||
+    value === 'right' ||
+    value === 'bottom' ||
+    value === 'left'
+  );
+}
+
+export function isAlignedPlacement(value: unknown): value is AlignedPlacement {
+  return (
+    value === 'top-start' ||
+    value === 'top-end' ||
+    value === 'right-start' ||
+    value === 'right-end' ||
+    value === 'bottom-start' ||
+    value === 'bottom-end' ||
+    value === 'left-start' ||
+    value === 'left-end'
+  );
+}
+
+export function isPlacement(value: unknown): value is Placement {
+  return value === 'auto' || isSide(value) || isAlignedPlacement(value);
 }
