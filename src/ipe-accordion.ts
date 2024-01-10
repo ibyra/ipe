@@ -243,7 +243,7 @@ export class IpeAccordionElement
         .then(() => this.holdSlots())
         .catch(console.error);
     }
-    const options = slot.assignedElements().filter(isHTMLDisclosure);
+    const options = elements.filter(isHTMLDisclosure);
     return options;
   }
 

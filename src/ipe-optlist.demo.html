@@ -35,14 +35,26 @@
       <h1><code>ipe-optlist</code> demo</h1>
       <form class="table">
         <p>
-          <label for="optlist">Select a fruit</label>
-          <ipe-optlist id="optlist">
+          <label for="user">Select a config</label>
+          <ipe-optlist id="user" name="user" required>
+            <template shadowrootmode="open">
+              <slot></slot>
+            </template>
+            <ipe-option value="single">Single User</ipe-option>
+            <ipe-option value="multiple">Multiple Users</ipe-option>
+          </ipe-optlist>
+        </p>
+        <p>
+          <label for="fruits">Select a fruit</label>
+          <ipe-optlist id="fruits" name="fruits" multiple>
             <template shadowrootmode="open">
               <slot></slot>
             </template>
             <ipe-option value="apple">Apple</ipe-option>
             <ipe-option value="banana">Banana</ipe-option>
             <ipe-option value="cranberry">Cranberry</ipe-option>
+            <ipe-option value="date">Date</ipe-option>
+            <ipe-option value="elderberry">Elderberry</ipe-option>
           </ipe-optlist>
         </p>
         <p>

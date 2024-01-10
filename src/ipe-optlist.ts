@@ -10,6 +10,8 @@ import { BooleanFData, IntegerFData, StringFData } from './formdata';
 
 // TODO: Add support to option group element
 
+// TODO: Add "shift+click" to support range selection
+
 export class IpeOptlistElement
   extends IpeElementFormSingleValue
   implements HTMLOptlist<HTMLValueOption>
@@ -214,7 +216,7 @@ export class IpeOptlistElement
       this.saveFormValue();
       return;
     }
-    if (name === this._multipleAttr.name) {
+    if (name === this._minLengthAttr.name) {
       const minLength = this._minLengthAttr.from(newValue);
       if (!this.changeMinLength(minLength)) return;
       this.saveFormValue();
@@ -230,6 +232,7 @@ export class IpeOptlistElement
 
   protected override getFormValidity(): FormValidity {
     const { flags, messages } = super.getFormValidity();
+
     messages.valueMissing = this.dataset['valueMissing'] ?? 'Required';
     flags.valueMissing = this.required && this._values.length === 0;
 
@@ -267,7 +270,7 @@ export class IpeOptlistElement
     super.setFormState(state);
     this.changeMultiple(this._multipleFData.get(state));
     this.changeMinLength(this._minLengthFData.get(state));
-    this.changeMinLength(this._maxLengthFData.get(state));
+    this.changeMaxLength(this._maxLengthFData.get(state));
     this.changeValues(this._valuesFData.getAll(state));
   }
 
@@ -309,6 +312,8 @@ export class IpeOptlistElement
       this.subscribe(option, 'beforetoggle', this.handleOptionBeforeToggle);
       this.subscribe(option, 'toggle', this.handleOptionToggle);
       this.subscribe(option, 'change', this.handleOptionChange);
+      const selected = this._values.includes(option.value);
+      option.selected = selected;
     }
 
     return true;
@@ -381,7 +386,7 @@ export class IpeOptlistElement
     if (selected) {
       newValue = this._multiple ? this._values.concat(value) : [value];
     } else {
-      newValue = this._multiple ? this._values.filter((v) => v === value) : [];
+      newValue = this._multiple ? this._values.filter((v) => v !== value) : [];
     }
     if (!this.changeValues(newValue)) return false;
     this.saveFormValue();
@@ -440,7 +445,7 @@ export class IpeOptlistElement
         .then(() => this.holdSlots())
         .catch(console.error);
     }
-    const options = slot.assignedElements().filter(isHTMLValueOption);
+    const options = elements.filter(isHTMLValueOption);
     return options;
   }
 

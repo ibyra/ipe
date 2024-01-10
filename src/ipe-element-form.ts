@@ -198,6 +198,7 @@ export abstract class IpeElementForm
     console.info(this, mode, state);
     if (mode !== 'restore') return;
     if (!(state instanceof FormData)) return;
+    this._userInteracted = true;
     this.setFormState(state);
     this.saveFormValue();
   }
