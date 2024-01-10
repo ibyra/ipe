@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>IpeComboboxElement demo</title>
+
+    <link rel="stylesheet" href="https://unpkg.com/missing.css@1.1.1" />
+    <style>
+      ipe-combobox {
+        display: block;
+        position: relative;
+        line-height: 1;
+      }
+      ipe-combobox::part(input) {
+        display: block;
+        width: 100%;
+        height: 2.5em;
+        padding: 0.25em;
+        border: solid 1px var(--graphical-fg);
+        background-color: var(--box-bg);
+        cursor: pointer;
+      }
+      ipe-combobox::part(picked) {
+        position: absolute;
+        display: flex;
+        flex-direction: row;
+        gap: 0.5em;
+        top: 50%;
+        left: 0.25em;
+        translate: 0 -50%;
+        pointer-events: none;
+      }
+      ipe-combobox::part(popover) {
+        box-sizing: border-box;
+        display: hidden;
+        margin: 0;
+        border: none;
+        background-color: var(--box-bg);
+      }
+      ipe-combobox::part(popover):popover-open {
+        display: flex;
+        flex-direction: column;
+        background-color: var(--box-bg);
+      }
+      ipe-option[slot='picked'] {
+        display: none;
+      }
+      ipe-option[slot='picked'][aria-selected='true'] {
+        display: block;
+        order: var(--ipe-combobox-index);
+      }
+      ipe-option[slot='popover'] {
+        display: block;
+        padding: 0.25em;
+        line-height: 1;
+        cursor: pointer;
+        color: var(--fg);
+      }
+      ipe-option[slot='popover'][active] {
+        background-color: var(--interactive-bg);
+      }
+      ipe-option[slot='popover'][aria-selected='true'] {
+        color: var(--accent);
+      }
+    </style>
+    <script type="module" src="./ipe-combobox.ts"></script>
+    <script type="module" src="./ipe-option.ts"></script>
+  </head>
+  <body>
+    <main>
+      <h1><code>ipe-combobox</code> demo</h1>
+      <form class="table">
+        <p>
+          <label for="combobox-single">Select the config</label>
+          <ipe-combobox id="combobox-single" name="user">
+            <template shadowrootmode="open">
+              <input part="input" type="button" popovertarget="popover" />
+              <slot name="picked" part="picked"></slot>
+              <slot></slot>
+              <slot
+                id="popover"
+                name="popover"
+                part="popover"
+                popover="auto"
+              ></slot>
+            </template>
+            <ipe-option slot="picked" value="single">Single user</ipe-option>
+            <ipe-option slot="picked" value="multiple">Multi-users</ipe-option>
+            <ipe-option slot="popover" value="single">One user</ipe-option>
+            <ipe-option slot="popover" value="multiple"
+              >Multiple users</ipe-option
+            >
+          </ipe-combobox>
+        </p>
+        <p>
+          <label for="combobox-multiple">Select some fruits</label>
+          <ipe-combobox id="combobox-multiple" multiple name="fruits">
+            <template shadowrootmode="open">
+              <input part="input" type="button" popovertarget="popover" />
+              <slot name="picked" part="picked"></slot>
+              <slot></slot>
+              <slot
+                id="popover"
+                name="popover"
+                part="popover"
+                popover="auto"
+              ></slot>
+            </template>
+            <ipe-option slot="picked" value="apple">Apple</ipe-option>
+            <ipe-option slot="picked" value="banana">Banana</ipe-option>
+            <ipe-option slot="picked" value="cranberry">Cranberry</ipe-option>
+            <ipe-option slot="picked" value="date">Date</ipe-option>
+            <ipe-option slot="picked" value="elderberry">Elderberry</ipe-option>
+            <ipe-option slot="popover" value="apple">Apple</ipe-option>
+            <ipe-option slot="popover" value="banana">Banana</ipe-option>
+            <ipe-option slot="popover" value="cranberry">Cranberry</ipe-option>
+            <ipe-option slot="popover" value="date">Date</ipe-option>
+            <ipe-option slot="popover" value="elderberry"
+              >Elderberry</ipe-option
+            >
+          </ipe-combobox>
+        </p>
+        <p>
+          <button type="submit">Submit</button>
+        </p>
+      </form>
+    </main>
+  </body>
+</html>

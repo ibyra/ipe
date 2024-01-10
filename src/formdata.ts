@@ -1,5 +1,5 @@
-import { isChecked, isString } from './commons';
-import type { Checked } from './dom';
+import { isChecked, isPlacement, isString } from './commons';
+import type { Checked, Placement } from './dom';
 
 export abstract class FData<D, T> {
   readonly name: string;
@@ -196,6 +196,23 @@ export class CheckedFData<D> extends FData<D, Checked> {
   override to(value: Checked): FormDataEntryValue | null {
     if (this.isDefault(value)) return null;
     if (!isChecked(value)) return null;
+    return value;
+  }
+}
+
+export class PlacementFData<D> extends FData<D, Placement> {
+  override isDefault(value: Placement): boolean {
+    return value === this.defaultValue;
+  }
+
+  override from(fdataValue: FormDataEntryValue | null): D | Placement {
+    if (!isPlacement(fdataValue)) return this.defaultValue;
+    return fdataValue;
+  }
+
+  override to(value: Placement): FormDataEntryValue | null {
+    if (this.isDefault(value)) return null;
+    if (!isPlacement(value)) return null;
     return value;
   }
 }
