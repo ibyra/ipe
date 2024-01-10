@@ -9,22 +9,22 @@ import { IpeElement } from './ipe-element';
 // TODO: Add support for "role=button" to be a summary
 
 export class IpeDisclosureElement extends IpeElement implements HTMLDisclosure {
-  protected _idAttr = new StringAttr(this, 'id', '');
+  protected _idAttr = new StringAttr('id', this.id);
 
   protected _open: boolean = false;
-  protected _openAttr = new BooleanAttr(this, 'open', false);
+  protected _openAttr = new BooleanAttr('open', this._open);
 
   protected _disabled: boolean = false;
-  protected _disabledAttr = new BooleanAttr(this, 'disabled', false);
+  protected _disabledAttr = new BooleanAttr('disabled', this._disabled);
 
   protected _duration = 150;
-  protected _durationAttr = new IntegerAttr(this, 'duration', 150);
+  protected _durationAttr = new IntegerAttr('duration', this._duration);
 
   protected _delay = 0;
-  protected _delayAttr = new IntegerAttr(this, 'delay', 0);
+  protected _delayAttr = new IntegerAttr('delay', this._delay);
 
   protected _easing = 'ease-in-out';
-  protected _easingAttr = new StringAttr(this, 'easing', 'ease-in-out');
+  protected _easingAttr = new StringAttr('easing', this._easing);
 
   protected _summaries: ReadonlyArray<HTMLButton> = [];
 
@@ -113,11 +113,11 @@ export class IpeDisclosureElement extends IpeElement implements HTMLDisclosure {
 
   protected override initProperties(): void {
     super.initProperties();
-    this.changeDisabled(this._disabledAttr.get());
-    this.changeOpen(this._openAttr.get());
-    this.changeDuration(this._durationAttr.get());
-    this.changeDelay(this._delayAttr.get());
-    this.changeEasing(this._easingAttr.get());
+    this.changeDisabled(this._disabledAttr.get(this));
+    this.changeOpen(this._openAttr.get(this));
+    this.changeDuration(this._durationAttr.get(this));
+    this.changeDelay(this._delayAttr.get(this));
+    this.changeEasing(this._easingAttr.get(this));
   }
 
   protected override holdSlots(): void {
@@ -188,7 +188,7 @@ export class IpeDisclosureElement extends IpeElement implements HTMLDisclosure {
     const oldValue = this._disabled;
     if (newValue === oldValue) return false;
     this._disabled = newValue;
-    this._disabledAttr.set(newValue);
+    this._disabledAttr.set(this, newValue);
     this.inert = newValue;
     this.ariaDisabled = newValue ? 'true' : 'false';
     this._internals.ariaDisabled = newValue ? 'true' : 'false';
@@ -227,7 +227,7 @@ export class IpeDisclosureElement extends IpeElement implements HTMLDisclosure {
     const startHeight = `${this.offsetHeight}px`;
 
     if (newValue) {
-      this._openAttr.set(true);
+      this._openAttr.set(this, true);
       const endHeight = `${this.offsetHeight}px`;
       for (const element of this._summaries) {
         element.ariaExpanded = 'true';
@@ -282,7 +282,7 @@ export class IpeDisclosureElement extends IpeElement implements HTMLDisclosure {
     const oldValue = this._duration;
     if (newValue === oldValue) return false;
     this._duration = newValue;
-    this._durationAttr.set(newValue);
+    this._durationAttr.set(this, newValue);
     return true;
   }
 
@@ -290,7 +290,7 @@ export class IpeDisclosureElement extends IpeElement implements HTMLDisclosure {
     const oldValue = this._delay;
     if (newValue === oldValue) return false;
     this._delay = newValue;
-    this._delayAttr.set(newValue);
+    this._delayAttr.set(this, newValue);
     return true;
   }
 
@@ -298,7 +298,7 @@ export class IpeDisclosureElement extends IpeElement implements HTMLDisclosure {
     const oldValue = this._easing;
     if (newValue === oldValue) return false;
     this._easing = newValue;
-    this._easingAttr.set(newValue);
+    this._easingAttr.set(this, newValue);
     return true;
   }
 
@@ -318,7 +318,7 @@ export class IpeDisclosureElement extends IpeElement implements HTMLDisclosure {
 
   protected handleCloseAnimationEnd(): void {
     this._animation = null;
-    this._openAttr.set(false);
+    this._openAttr.set(this, false);
   }
 
   static override get observedAttributes(): Array<string> {

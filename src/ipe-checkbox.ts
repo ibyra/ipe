@@ -8,13 +8,13 @@ import {
 } from './ipe-element-form';
 
 export class IpeCheckboxElement extends IpeElementFormSingleValue {
-  protected _valueAttr = new StringAttr(this, 'value', 'on');
-  protected _valueFData = new StringFData('value', 'on');
   protected _value: string = 'on';
+  protected _valueAttr = new StringAttr('value', this._value);
+  protected _valueFData = new StringFData('value', this._value);
 
-  protected _checkedAttr = new CheckedAttr(this, 'checked', 'false' as Checked);
-  protected _checkedFData = new CheckedFData('checked', 'false' as Checked);
   protected _checked: Checked = 'false';
+  protected _checkedAttr = new CheckedAttr('checked', this._checked);
+  protected _checkedFData = new CheckedFData('checked', this._checked);
 
   get value(): string {
     return this._value;
@@ -35,21 +35,21 @@ export class IpeCheckboxElement extends IpeElementFormSingleValue {
   }
 
   get defaultValue(): string {
-    return this._valueAttr.get();
+    return this._valueAttr.get(this);
   }
   set defaultValue(value: string) {
-    if (!this._valueAttr.set(value)) return;
+    if (!this._valueAttr.set(this, value)) return;
   }
 
   get defaultChecked(): Checked {
-    return this._checkedAttr.get();
+    return this._checkedAttr.get(this);
   }
   set defaultChecked(value: Checked) {
-    if (!this._checkedAttr.set(value)) return;
+    if (!this._checkedAttr.set(this, value)) return;
   }
 
   protected get dirtyChecked(): boolean {
-    return this._value !== this._checkedAttr.get();
+    return this._value !== this._checkedAttr.get(this);
   }
 
   protected override initProperties(): void {
@@ -58,8 +58,8 @@ export class IpeCheckboxElement extends IpeElementFormSingleValue {
     if (!this.hasAttribute('tabindex')) {
       this.tabIndex = 0;
     }
-    this.changeValue(this._valueAttr.get());
-    this.changeChecked(this._checkedAttr.get());
+    this.changeValue(this._valueAttr.get(this));
+    this.changeChecked(this._checkedAttr.get(this));
   }
 
   protected override resetProperties(): void {

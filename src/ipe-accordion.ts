@@ -13,13 +13,13 @@ export class IpeAccordionElement
   implements HTMLOptlist<HTMLDisclosure>
 {
   protected _disabled = false;
-  protected _disabledAttr = new BooleanAttr(this, 'disabled', false);
+  protected _disabledAttr = new BooleanAttr('disabled', this._disabled);
 
   protected _multiple = false;
-  protected _multipleAttr = new BooleanAttr(this, 'multiple', false);
+  protected _multipleAttr = new BooleanAttr('multiple', this._multiple);
 
   protected _required = false;
-  protected _requiredAttr = new BooleanAttr(this, 'required', false);
+  protected _requiredAttr = new BooleanAttr('required', this._required);
 
   protected _options = [] as ReadonlyArray<HTMLDisclosure>;
 
@@ -102,9 +102,9 @@ export class IpeAccordionElement
 
   protected override initProperties(): void {
     super.initProperties();
-    this.changeDisabled(this._disabledAttr.get());
-    this.changeMultiple(this._multipleAttr.get());
-    this.changeRequired(this._requiredAttr.get());
+    this.changeDisabled(this._disabledAttr.get(this));
+    this.changeMultiple(this._multipleAttr.get(this));
+    this.changeRequired(this._requiredAttr.get(this));
   }
 
   protected override holdSlots(): void {
@@ -173,7 +173,7 @@ export class IpeAccordionElement
     const oldValue = this._disabled;
     if (newValue === oldValue) return false;
     this._disabled = newValue;
-    this._disabledAttr.set(newValue);
+    this._disabledAttr.set(this, newValue);
     this.inert = newValue;
     this.ariaDisabled = newValue ? 'true' : 'false';
     this._internals.ariaDisabled = newValue ? 'true' : 'false';
@@ -184,7 +184,7 @@ export class IpeAccordionElement
     const oldValue = this._multiple;
     if (newValue === oldValue) return false;
     this._multiple = newValue;
-    this._multipleAttr.set(newValue);
+    this._multipleAttr.set(this, newValue);
     this.ariaMultiSelectable = newValue ? 'true' : 'false';
     this._internals.ariaMultiSelectable = newValue ? 'true' : 'false';
     return true;
@@ -194,7 +194,7 @@ export class IpeAccordionElement
     const oldValue = this._required;
     if (newValue === oldValue) return false;
     this._required = newValue;
-    this._requiredAttr.set(newValue);
+    this._requiredAttr.set(this, newValue);
     return true;
   }
 

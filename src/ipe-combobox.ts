@@ -34,31 +34,27 @@ export class IpeComboboxElement
   extends IpeOptlistElement
   implements HTMLOptlist<HTMLValueOption>, HTMLOpenable
 {
-  protected _openAttr = new BooleanAttr(this, 'open', false);
   protected _open: boolean = false;
+  protected _openAttr = new BooleanAttr('open', this._open);
 
-  protected _placeholderAttr = new StringAttr(this, 'placeholder', '');
-  protected _placeholderFData = new StringFData('placeholder', '');
   protected _placeholder: string = '';
+  protected _placeholderAttr = new StringAttr('placeholder', this._placeholder);
+  protected _placeholderFData = new StringFData(
+    'placeholder',
+    this._placeholder,
+  );
 
-  protected _offsetAttr = new IntegerAttr(this, 'offset', 0);
-  protected _offsetFData = new IntegerFData('offset', 0);
   protected _offset: number = 0;
+  protected _offsetAttr = new IntegerAttr('offset', this._offset);
+  protected _offsetFData = new IntegerFData('offset', this._offset);
 
-  protected _shiftAttr = new IntegerAttr(this, 'shift', 0);
-  protected _shiftFData = new IntegerFData('shift', 0);
   protected _shift: number = 0;
+  protected _shiftAttr = new IntegerAttr('shift', this._shift);
+  protected _shiftFData = new IntegerFData('shift', this._shift);
 
-  protected _placementAttr = new PlacementAttr(
-    this,
-    'placement',
-    'auto' as Placement,
-  );
-  protected _placementFData = new PlacementFData(
-    'placement',
-    'auto' as Placement,
-  );
   protected _placement: Placement = 'auto';
+  protected _placementAttr = new PlacementAttr('placement', this._placement);
+  protected _placementFData = new PlacementFData('placement', this._placement);
 
   protected _popoverElem: HTMLDivElement;
 
@@ -147,11 +143,11 @@ export class IpeComboboxElement
 
   protected override initProperties(): void {
     super.initProperties();
-    this.changePlaceholder(this._placeholderAttr.get());
-    this.changeOpen(this._openAttr.get());
-    this.changeOffset(this._offsetAttr.get());
-    this.changeShift(this._shiftAttr.get());
-    this.changePlacement(this._placementAttr.get());
+    this.changePlaceholder(this._placeholderAttr.get(this));
+    this.changeOpen(this._openAttr.get(this));
+    this.changeOffset(this._offsetAttr.get(this));
+    this.changeShift(this._shiftAttr.get(this));
+    this.changePlacement(this._placementAttr.get(this));
     this._internals.ariaHasPopup = 'true';
     if (!this.hasAttribute('aria-haspopup')) {
       this.ariaHasPopup = 'true';
@@ -307,7 +303,7 @@ export class IpeComboboxElement
     const oldValue = this._placeholder;
     if (newValue === oldValue) return false;
     this._placeholder = newValue;
-    this._placeholderAttr.set(newValue);
+    this._placeholderAttr.set(this, newValue);
     this._internals.ariaPlaceholder = newValue;
     this.ariaPlaceholder = newValue;
     this._inputElem.value = this._values.length === 0 ? newValue : '';
@@ -318,7 +314,7 @@ export class IpeComboboxElement
     const oldValue = this._open;
     if (newValue === oldValue) return false;
     this._open = newValue;
-    this._openAttr.set(newValue);
+    this._openAttr.set(this, newValue);
     this._internals.ariaExpanded = newValue ? 'true' : 'false';
     this.ariaExpanded = newValue ? 'true' : 'false';
     return true;
@@ -328,7 +324,7 @@ export class IpeComboboxElement
     const oldValue = this._offset;
     if (oldValue === newValue) return false;
     this._offset = newValue;
-    this._offsetAttr.set(newValue);
+    this._offsetAttr.set(this, newValue);
     return true;
   }
 
@@ -336,7 +332,7 @@ export class IpeComboboxElement
     const oldValue = this._shift;
     if (oldValue === newValue) return false;
     this._shift = newValue;
-    this._shiftAttr.set(newValue);
+    this._shiftAttr.set(this, newValue);
     return true;
   }
 
@@ -344,7 +340,7 @@ export class IpeComboboxElement
     const oldValue = this._placement;
     if (oldValue === newValue) return false;
     this._placement = newValue;
-    this._placementAttr.set(newValue);
+    this._placementAttr.set(this, newValue);
     return true;
   }
 

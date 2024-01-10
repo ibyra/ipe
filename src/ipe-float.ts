@@ -21,27 +21,27 @@ import {
 // TODO: Observe changes on anchor ID to update the float element;
 
 export class IpeFloatElement extends IpeElement implements HTMLOpenable {
-  protected _openAttr = new BooleanAttr(this, 'open', false);
   protected _open: boolean = false;
+  protected _openAttr = new BooleanAttr('open', this._open);
 
-  protected _inlineAttr = new BooleanAttr(this, 'inline', false);
   protected _inline: boolean = false;
+  protected _inlineAttr = new BooleanAttr('inline', this._inline);
 
-  protected _offsetAttr = new IntegerAttr(this, 'offset', 0);
   protected _offset: number = 0;
+  protected _offsetAttr = new IntegerAttr('offset', this._offset);
 
-  protected _shiftAttr = new IntegerAttr(this, 'shift', 0);
   protected _shift: number = 0;
+  protected _shiftAttr = new IntegerAttr('shift', this._shift);
 
-  protected _placementAttr = new PlacementAttr(
-    this,
-    'placement',
-    'auto' as Placement,
-  );
   protected _placement: Placement = 'auto';
+  protected _placementAttr = new PlacementAttr('placement', this._placement);
 
-  protected _anchorAttr = new IdRefAttr(this, 'anchor', null);
   protected _anchor: Element | null = null;
+  protected _anchorAttr = new IdRefAttr(
+    'anchor',
+    this._anchor,
+    this.ownerDocument,
+  );
 
   protected _updateTimerID: number | null = null;
 
@@ -103,15 +103,15 @@ export class IpeFloatElement extends IpeElement implements HTMLOpenable {
 
   protected override initProperties(): void {
     super.initProperties();
-    this.changeAnchor(this._anchorAttr.get());
-    this.changePlacement(this._placementAttr.get());
-    this.changeOffset(this._offsetAttr.get());
-    this.changeShift(this._shiftAttr.get());
-    this.changeInline(this._inlineAttr.get());
-    this.changeOpen(this._openAttr.get());
     if (!this.hasAttribute('popover')) {
       this.popover = 'auto';
     }
+    this.changeAnchor(this._anchorAttr.get(this));
+    this.changePlacement(this._placementAttr.get(this));
+    this.changeOffset(this._offsetAttr.get(this));
+    this.changeShift(this._shiftAttr.get(this));
+    this.changeInline(this._inlineAttr.get(this));
+    this.changeOpen(this._openAttr.get(this));
   }
 
   protected override holdListeners(): void {
@@ -182,7 +182,7 @@ export class IpeFloatElement extends IpeElement implements HTMLOpenable {
     const oldValue = this._open;
     if (newValue === oldValue) return false;
     this._open = newValue;
-    this._openAttr.set(newValue);
+    this._openAttr.set(this, newValue);
     if (this._anchor != null) {
       this._anchor.ariaExpanded = newValue ? 'true' : 'false';
     }
@@ -193,7 +193,7 @@ export class IpeFloatElement extends IpeElement implements HTMLOpenable {
     const oldValue = this._anchor;
     if (oldValue === newValue) return false;
     this._anchor = newValue;
-    this._anchorAttr.set(newValue);
+    this._anchorAttr.set(this, newValue);
     if (oldValue != null) {
       oldValue.ariaHasPopup = null;
       oldValue.ariaExpanded = null;
@@ -209,7 +209,7 @@ export class IpeFloatElement extends IpeElement implements HTMLOpenable {
     const oldValue = this._inline;
     if (oldValue === newValue) return false;
     this._inline = newValue;
-    this._inlineAttr.set(newValue);
+    this._inlineAttr.set(this, newValue);
     return true;
   }
 
@@ -217,7 +217,7 @@ export class IpeFloatElement extends IpeElement implements HTMLOpenable {
     const oldValue = this._offset;
     if (oldValue === newValue) return false;
     this._offset = newValue;
-    this._offsetAttr.set(newValue);
+    this._offsetAttr.set(this, newValue);
     return true;
   }
 
@@ -225,7 +225,7 @@ export class IpeFloatElement extends IpeElement implements HTMLOpenable {
     const oldValue = this._shift;
     if (oldValue === newValue) return false;
     this._shift = newValue;
-    this._shiftAttr.set(newValue);
+    this._shiftAttr.set(this, newValue);
     return true;
   }
 
@@ -233,7 +233,7 @@ export class IpeFloatElement extends IpeElement implements HTMLOpenable {
     const oldValue = this._placement;
     if (oldValue === newValue) return false;
     this._placement = newValue;
-    this._placementAttr.set(newValue);
+    this._placementAttr.set(this, newValue);
     return true;
   }
 

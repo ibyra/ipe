@@ -16,17 +16,17 @@ export class IpeOptlistElement
   extends IpeElementFormSingleValue
   implements HTMLOptlist<HTMLValueOption>
 {
-  protected _multipleAttr = new BooleanAttr(this, 'multiple', false);
-  protected _multipleFData = new BooleanFData('multiple', false);
   protected _multiple: boolean = false;
+  protected _multipleAttr = new BooleanAttr('multiple', this._multiple);
+  protected _multipleFData = new BooleanFData('multiple', this._multiple);
 
-  protected _minLengthAttr = new IntegerAttr(this, 'minlength', 0);
-  protected _minLengthFData = new IntegerFData('minlength', 0);
   protected _minLength: number = 0;
+  protected _minLengthAttr = new IntegerAttr('minlength', this._minLength);
+  protected _minLengthFData = new IntegerFData('minlength', this._minLength);
 
-  protected _maxLengthAttr = new IntegerAttr(this, 'maxlength', Infinity);
-  protected _maxLengthFData = new IntegerFData('maxlength', Infinity);
   protected _maxLength: number = Infinity;
+  protected _maxLengthAttr = new IntegerAttr('maxlength', this._maxLength);
+  protected _maxLengthFData = new IntegerFData('maxlength', this._maxLength);
 
   protected _valuesFData = new StringFData('values', '');
   protected _values: ReadonlyArray<string> = [];
@@ -157,9 +157,9 @@ export class IpeOptlistElement
 
   protected override initProperties(): void {
     super.initProperties();
-    this.changeMultiple(this._multipleAttr.get());
-    this.changeMinLength(this._minLengthAttr.get());
-    this.changeMaxLength(this._maxLengthAttr.get());
+    this.changeMultiple(this._multipleAttr.get(this));
+    this.changeMinLength(this._minLengthAttr.get(this));
+    this.changeMaxLength(this._maxLengthAttr.get(this));
     if (!this.hasAttribute('tabindex')) {
       this.tabIndex = 0;
     }
@@ -345,7 +345,7 @@ export class IpeOptlistElement
     const oldValue = this._minLength;
     if (newValue === oldValue) return false;
     this._minLength = newValue;
-    this._minLengthAttr.set(newValue);
+    this._minLengthAttr.set(this, newValue);
     return true;
   }
 
@@ -353,7 +353,7 @@ export class IpeOptlistElement
     const oldValue = this._maxLength;
     if (newValue === oldValue) return false;
     this._maxLength = newValue;
-    this._maxLengthAttr.set(newValue);
+    this._maxLengthAttr.set(this, newValue);
     return true;
   }
 
@@ -361,7 +361,7 @@ export class IpeOptlistElement
     const oldValue = this._multiple;
     if (oldValue === newValue) return false;
     this._multiple = newValue;
-    this._multipleAttr.set(newValue);
+    this._multipleAttr.set(this, newValue);
     this.ariaMultiSelectable = newValue ? 'true' : 'false';
     this._internals.ariaMultiSelectable = newValue ? 'true' : 'false';
     return true;

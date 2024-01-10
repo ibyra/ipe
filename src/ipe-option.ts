@@ -4,14 +4,14 @@ import { type HTMLValueOption } from './dom';
 import { IpeElement } from './ipe-element';
 
 export class IpeOptionElement extends IpeElement implements HTMLValueOption {
-  protected _valueAttr = new StringAttr(this, 'value', '');
   protected _value: string = '';
+  protected _valueAttr = new StringAttr('value', this._value);
 
-  protected _disabledAttr = new BooleanAttr(this, 'disabled', false);
   protected _disabled: boolean = false;
+  protected _disabledAttr = new BooleanAttr('disabled', this._disabled);
 
-  protected _selectedAttr = new BooleanAttr(this, 'selected', false);
   protected _selected: boolean = false;
+  protected _selectedAttr = new BooleanAttr('selected', this._selected);
 
   protected _userInteracted: boolean = false;
 
@@ -44,19 +44,19 @@ export class IpeOptionElement extends IpeElement implements HTMLValueOption {
   }
 
   get defaultValue(): string {
-    return this._valueAttr.get();
+    return this._valueAttr.get(this);
   }
   set defaultValue(value: string) {
     if (!isString(value)) return;
-    if (!this._valueAttr.set(value)) return;
+    if (!this._valueAttr.set(this, value)) return;
   }
 
   get defaultSelected(): boolean {
-    return this._selectedAttr.get();
+    return this._selectedAttr.get(this);
   }
   set defaultSelected(value: boolean) {
     if (!isBoolean(value)) return;
-    if (!this._selectedAttr.set(value)) return;
+    if (!this._selectedAttr.set(this, value)) return;
   }
 
   toggle(): void {
@@ -73,9 +73,9 @@ export class IpeOptionElement extends IpeElement implements HTMLValueOption {
 
   protected override initProperties(): void {
     super.initProperties();
-    this.changeValue(this._valueAttr.get());
-    this.changeDisabled(this._disabledAttr.get());
-    this.changeSelected(this._selectedAttr.get());
+    this.changeValue(this._valueAttr.get(this));
+    this.changeDisabled(this._disabledAttr.get(this));
+    this.changeSelected(this._selectedAttr.get(this));
   }
 
   protected override holdListeners(): void {
@@ -122,7 +122,7 @@ export class IpeOptionElement extends IpeElement implements HTMLValueOption {
     const oldValue = this._disabled;
     if (newValue === oldValue) return false;
     this._disabled = newValue;
-    this._disabledAttr.set(newValue);
+    this._disabledAttr.set(this, newValue);
     this.inert = newValue;
     this.ariaDisabled = newValue ? 'true' : 'false';
     this._internals.ariaDisabled = newValue ? 'true' : 'false';

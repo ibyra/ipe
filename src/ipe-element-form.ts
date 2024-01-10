@@ -16,16 +16,16 @@ export abstract class IpeElementForm
   extends IpeElement
   implements HTMLFormControl
 {
-  protected _disabledAttr = new BooleanAttr(this, 'disabled', false);
   protected _disabled = false;
+  protected _disabledAttr = new BooleanAttr('disabled', this._disabled);
 
-  protected _readOnlyAttr = new BooleanAttr(this, 'readonly', false);
-  protected _readOnlyFData = new BooleanFData('readonly', false);
   protected _readOnly = false;
+  protected _readOnlyAttr = new BooleanAttr('readonly', this._readOnly);
+  protected _readOnlyFData = new BooleanFData('readonly', this._readOnly);
 
-  protected _requiredAttr = new BooleanAttr(this, 'required', false);
-  protected _requiredFData = new BooleanFData('required', false);
   protected _required = false;
+  protected _requiredAttr = new BooleanAttr('required', this._required);
+  protected _requiredFData = new BooleanFData('required', this._required);
 
   protected _dirty = false;
 
@@ -101,9 +101,9 @@ export abstract class IpeElementForm
 
   protected override initProperties(): void {
     super.initProperties();
-    this.changeDisabled(this._disabledAttr.get());
-    this.changeReadOnly(this._readOnlyAttr.get());
-    this.changeRequired(this._requiredAttr.get());
+    this.changeDisabled(this._disabledAttr.get(this));
+    this.changeReadOnly(this._readOnlyAttr.get(this));
+    this.changeRequired(this._requiredAttr.get(this));
   }
 
   /**
@@ -327,7 +327,7 @@ export abstract class IpeElementForm
     const oldValue = this._disabled;
     if (newValue === oldValue) return false;
     this._disabled = newValue;
-    this._disabledAttr.set(newValue);
+    this._disabledAttr.set(this, newValue);
     this._internals.ariaDisabled = newValue ? 'true' : 'false';
     this.ariaDisabled = newValue ? 'true' : 'false';
     return true;
@@ -337,7 +337,7 @@ export abstract class IpeElementForm
     const oldValue = this._readOnly;
     if (newValue === oldValue) return false;
     this._readOnly = newValue;
-    this._readOnlyAttr.set(newValue);
+    this._readOnlyAttr.set(this, newValue);
     this._internals.ariaReadOnly = newValue ? 'true' : 'false';
     this.ariaReadOnly = newValue ? 'true' : 'false';
     return true;
@@ -347,7 +347,7 @@ export abstract class IpeElementForm
     const oldValue = this._required;
     if (newValue === oldValue) return false;
     this._required = newValue;
-    this._requiredAttr.set(newValue);
+    this._requiredAttr.set(this, newValue);
     this._internals.ariaRequired = newValue ? 'true' : 'false';
     this.ariaRequired = newValue ? 'true' : 'false';
     return true;
@@ -372,13 +372,19 @@ export abstract class IpeElementForm
  * elements can extend.
  */
 export abstract class IpeElementFormSingleValue extends IpeElementForm {
-  protected _nameFData = new StringFData('name', '');
-  protected _nameAttr = new StringAttr(this, 'name', '');
   protected _name: string = '';
+  protected _nameAttr = new StringAttr('name', this._name);
+  protected _nameFData = new StringFData('name', this._name);
 
-  protected _autocompleteFData = new StringFData('autocomplete', '');
-  protected _autocompleteAttr = new StringAttr(this, 'autocomplete', '');
   protected _autocomplete: AutoFill = '';
+  protected _autocompleteAttr = new StringAttr(
+    'autocomplete',
+    this._autocomplete,
+  );
+  protected _autocompleteFData = new StringFData(
+    'autocomplete',
+    this._autocomplete,
+  );
 
   get name(): string {
     return this._name;
@@ -401,8 +407,8 @@ export abstract class IpeElementFormSingleValue extends IpeElementForm {
 
   protected override initProperties(): void {
     super.initProperties();
-    this.changeName(this._nameAttr.get());
-    this.changeAutocomplete(this._autocompleteAttr.get());
+    this.changeName(this._nameAttr.get(this));
+    this.changeAutocomplete(this._autocompleteAttr.get(this));
   }
 
   protected override attributeChangedCallback(
@@ -442,7 +448,7 @@ export abstract class IpeElementFormSingleValue extends IpeElementForm {
     const oldValue = this._name;
     if (newValue === oldValue) return false;
     this._name = newValue;
-    this._nameAttr.set(newValue);
+    this._nameAttr.set(this, newValue);
     return true;
   }
 
@@ -450,7 +456,7 @@ export abstract class IpeElementFormSingleValue extends IpeElementForm {
     const oldValue = this._autocomplete;
     if (newValue === oldValue) return false;
     this._autocomplete = newValue as AutoFill;
-    this._autocompleteAttr.set(newValue);
+    this._autocompleteAttr.set(this, newValue);
     return true;
   }
 

@@ -1,13 +1,16 @@
 import { isChecked, isPlacement, isString } from './commons';
 import type { Checked, Placement } from './dom';
 
-export abstract class Attr<E extends Element, D, T> {
-  readonly element: E;
+/**
+ * Represents a attribute parser of a DOM Element, with a name and a default
+ * value. You can get/set the attributes as any value accordingly to the
+ * `to` and `from` methods.
+ */
+export abstract class Attr<D, T> {
   readonly name: string;
   readonly defaultValue: D;
 
-  constructor(element: E, name: string, defaultValue: D) {
-    this.element = element;
+  constructor(name: string, defaultValue: D) {
     this.name = name;
     this.defaultValue = defaultValue;
   }
@@ -34,8 +37,8 @@ export abstract class Attr<E extends Element, D, T> {
    * Returns an value of the attribute in the element.
    * @returns
    */
-  get(): T | D {
-    const attribute = this.element.getAttribute(this.name);
+  get(element: Element): T | D {
+    const attribute = element.getAttribute(this.name);
     return this.from(attribute);
   }
 
@@ -45,20 +48,20 @@ export abstract class Attr<E extends Element, D, T> {
    *
    * @param value
    */
-  set(value: T): boolean {
+  set(element: Element, value: T): boolean {
     const newValue = this.to(value);
-    const oldValue = this.element.getAttribute(this.name);
+    const oldValue = element.getAttribute(this.name);
     if (newValue === oldValue) return false;
     if (newValue == null) {
-      this.element.removeAttribute(this.name);
+      element.removeAttribute(this.name);
     } else {
-      this.element.setAttribute(this.name, newValue);
+      element.setAttribute(this.name, newValue);
     }
     return true;
   }
 }
 
-export class StringAttr<E extends Element, D> extends Attr<E, D, string> {
+export class StringAttr<D> extends Attr<D, string> {
   override isDefault(value: string): boolean {
     return value === this.defaultValue;
   }
@@ -74,7 +77,7 @@ export class StringAttr<E extends Element, D> extends Attr<E, D, string> {
   }
 }
 
-export class BooleanAttr<E extends Element, D> extends Attr<E, D, boolean> {
+export class BooleanAttr<D> extends Attr<D, boolean> {
   override isDefault(value: boolean): boolean {
     return value === this.defaultValue;
   }
@@ -90,7 +93,7 @@ export class BooleanAttr<E extends Element, D> extends Attr<E, D, boolean> {
   }
 }
 
-export class IntegerAttr<E extends Element, D> extends Attr<E, D, number> {
+export class IntegerAttr<D> extends Attr<D, number> {
   override isDefault(value: number): boolean {
     return value === this.defaultValue;
   }
@@ -110,7 +113,7 @@ export class IntegerAttr<E extends Element, D> extends Attr<E, D, number> {
   }
 }
 
-export class FloatAttr<E extends Element, D> extends Attr<E, D, number> {
+export class FloatAttr<D> extends Attr<D, number> {
   override isDefault(value: number): boolean {
     return value === this.defaultValue;
   }
@@ -129,7 +132,7 @@ export class FloatAttr<E extends Element, D> extends Attr<E, D, number> {
   }
 }
 
-export class NumberAttr<E extends Element, D> extends Attr<E, D, number> {
+export class NumberAttr<D> extends Attr<D, number> {
   override isDefault(value: number): boolean {
     return (
       value === this.defaultValue ||
@@ -149,11 +152,14 @@ export class NumberAttr<E extends Element, D> extends Attr<E, D, number> {
   }
 }
 
-export class IdRefAttr<E extends Element, D> extends Attr<
-  E,
-  D,
-  Element | null
-> {
+export class IdRefAttr<D> extends Attr<D, Element | null> {
+  readonly root: ParentNode;
+
+  constructor(name: string, defaultValue: D, root: ParentNode) {
+    super(name, defaultValue);
+    this.root = root;
+  }
+
   override isDefault(value: Element | null): boolean {
     return value === this.defaultValue;
   }
@@ -161,7 +167,7 @@ export class IdRefAttr<E extends Element, D> extends Attr<
   override from(attribute: string | null): Element | D | null {
     if (!isString(attribute)) return this.defaultValue;
     if (attribute === '') return this.defaultValue;
-    return this.element.ownerDocument.querySelector(`#${attribute}`);
+    return this.root.querySelector(`#${attribute}`);
   }
 
   override to(value: Element | null): string | null {
@@ -171,7 +177,7 @@ export class IdRefAttr<E extends Element, D> extends Attr<
   }
 }
 
-export class CheckedAttr<E extends Element, D> extends Attr<E, D, Checked> {
+export class CheckedAttr<D> extends Attr<D, Checked> {
   override isDefault(value: Checked): boolean {
     return this.defaultValue === value;
   }
@@ -188,7 +194,7 @@ export class CheckedAttr<E extends Element, D> extends Attr<E, D, Checked> {
   }
 }
 
-export class PlacementAttr<E extends Element, D> extends Attr<E, D, Placement> {
+export class PlacementAttr<D> extends Attr<D, Placement> {
   override from(attribute: string | null): D | Placement {
     if (!isPlacement(attribute)) return this.defaultValue;
     return attribute;
