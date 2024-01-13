@@ -1,6 +1,11 @@
 import { isChecked, isPlacement, isString } from './commons';
 import type { Checked, Placement } from './dom';
 
+/**
+ * Represents a `FormDataEntryValue` parser with a name and a default value. You
+ * can get/set the attributes as any value accordingly to the `to` and `from`
+ * methods.
+ */
 export abstract class FData<D, T> {
   readonly name: string;
   readonly defaultValue: D;
