@@ -20,11 +20,13 @@
         cursor: pointer;
       }
       ipe-option[active] {
-        background-color: var(--box-bg);
-        color: var();
+        background-color: rgba(127, 200, 255, 0.1);
       }
-      ipe-option[aria-selected='true'] {
-        background-color: var(--interactive-bg);
+      ipe-option[selected] {
+        background-color: rgba(127, 200, 255, 0.2);
+      }
+      ipe-option[active][selected] {
+        background-color: rgba(127, 200, 255, 0.3);
       }
     </style>
     <script type="module" src="./ipe-optlist.ts"></script>
@@ -36,18 +38,57 @@
       <form class="table">
         <p>
           <label for="user">Select a config</label>
-          <ipe-optlist id="user" name="user" required>
+          <ipe-optlist id="user" name="user" required tabindex="0">
             <template shadowrootmode="open">
+              <style>
+                :host {
+                  display: block;
+                }
+                ::slotted([active]) {
+                  background-color: rgba(255, 255, 255, 0.1);
+                }
+                ::slotted([selected]) {
+                  background-color: rgba(255, 255, 255, 0.2);
+                }
+                ::slotted([active][selected]) {
+                  background-color: rgba(255, 255, 255, 0.3);
+                }
+              </style>
               <slot></slot>
             </template>
-            <ipe-option value="single">Single User</ipe-option>
-            <ipe-option value="multiple">Multiple Users</ipe-option>
+            <ipe-option id="option-single" value="single" selected>
+              Single User
+            </ipe-option>
+            <ipe-option id="option-multiple" value="multiple">
+              Multiple Users
+            </ipe-option>
           </ipe-optlist>
         </p>
         <p>
-          <label for="fruits">Select a fruit</label>
-          <ipe-optlist id="fruits" name="fruits" multiple>
+          <label for="fruits">Select two or three fruit</label>
+          <ipe-optlist
+            id="fruits"
+            name="fruits"
+            multiple
+            minlength="2"
+            maxlength="3"
+            tabindex="0"
+          >
             <template shadowrootmode="open">
+              <style>
+                :host {
+                  display: block;
+                }
+                ::slotted([active]) {
+                  background-color: rgba(255, 255, 255, 0.1);
+                }
+                ::slotted([selected]) {
+                  background-color: rgba(255, 255, 255, 0.2);
+                }
+                ::slotted([active][selected]) {
+                  background-color: rgba(255, 255, 255, 0.3);
+                }
+              </style>
               <slot></slot>
             </template>
             <ipe-option value="apple">Apple</ipe-option>

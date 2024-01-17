@@ -40,8 +40,7 @@
   },
   "homepage": "https://github.com/ibyra/ipe#readme",
   "scripts": {
-    "start": "web-dev-server --open src/ --node-resolve",
-    "start:watch": "web-dev-server --open src/ --node-resolve --watch",
+    "dev": "web-dev-server --open src/ --node-resolve --watch",
     "clean": "rm -rf dist",
     "build": "tsup src/index.ts src/ipe-accordion.ts src/ipe-checkbox.ts src/ipe-combobox.ts src/ipe-disclosure.ts src/ipe-field.ts src/ipe-float.ts src/ipe-option.ts src/ipe-optlist.ts src/ipe-tooltip.ts --format esm --dts --clean",
     "ignore-sync": "ignore-sync .",

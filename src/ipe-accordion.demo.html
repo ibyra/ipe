@@ -9,21 +9,9 @@
     <script type="module" src="./ipe-accordion.ts"></script>
     <script type="module" src="./ipe-disclosure.ts"></script>
     <style>
-      ipe-accordion {
-        display: block;
-      }
-
       ipe-disclosure {
-        display: block;
         background-color: var(--box-bg);
-        overflow: hidden;
         line-height: 1;
-      }
-      ipe-disclosure::part(content) {
-        display: none;
-      }
-      ipe-disclosure[open]::part(content) {
-        display: unset;
       }
     </style>
   </head>
@@ -32,12 +20,29 @@
       <h1><code>ipe-accordion</code> demo</h1>
       <ipe-accordion>
         <template shadowrootmode="open">
+          <style>
+            :host {
+              display: block;
+            }
+          </style>
           <slot></slot>
         </template>
-        <ipe-disclosure>
+        <ipe-disclosure id="a" open>
           <template shadowrootmode="open">
-            <slot name="summary" part="summary"></slot>
-            <slot part="content"></slot>
+            <style>
+              :host {
+                display: block;
+                overflow: hidden;
+              }
+              :host #content {
+                display: none;
+              }
+              :host([open]) #content {
+                display: unset;
+              }
+            </style>
+            <slot id="summary" name="summary" part="summary"></slot>
+            <slot id="content" part="content"></slot>
           </template>
           <button slot="summary">Summary A</button>
           <p>
@@ -47,10 +52,22 @@
             mollitia, cum blanditiis officia.
           </p>
         </ipe-disclosure>
-        <ipe-disclosure>
+        <ipe-disclosure id="b">
           <template shadowrootmode="open">
-            <slot name="summary" part="summary"></slot>
-            <slot part="content"></slot>
+            <style>
+              :host {
+                display: block;
+                overflow: hidden;
+              }
+              :host #content {
+                display: none;
+              }
+              :host([open]) #content {
+                display: unset;
+              }
+            </style>
+            <slot id="summary" name="summary" part="summary"></slot>
+            <slot id="content" part="content"></slot>
           </template>
           <button slot="summary">Summary B</button>
           <p>
@@ -59,10 +76,22 @@
             omnis tenetur.
           </p>
         </ipe-disclosure>
-        <ipe-disclosure>
+        <ipe-disclosure id="c">
           <template shadowrootmode="open">
-            <slot name="summary" part="summary"></slot>
-            <slot part="content"></slot>
+            <style>
+              :host {
+                display: block;
+                overflow: hidden;
+              }
+              :host #content {
+                display: none;
+              }
+              :host([open]) #content {
+                display: unset;
+              }
+            </style>
+            <slot id="summary" name="summary" part="summary"></slot>
+            <slot id="content" part="content"></slot>
           </template>
           <button slot="summary">Summary C</button>
           <p>

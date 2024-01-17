@@ -1,38 +1,57 @@
 import { isEqual } from 'moderndash';
 import { type HTMLFormControl } from './dom';
 import { IpeElement } from './ipe-element';
-import { isHTMLFormControl } from './commons';
+import { getErrorMessageElement, isHTMLFormControl } from './commons';
+import { Property } from './property';
 
 export class IpeFieldElement extends IpeElement {
   protected _invalidated = false;
-  protected _controls: ReadonlyArray<HTMLFormControl> = [];
+
+  protected _controls = new Property(this, {
+    name: 'controls',
+    equals: isEqual,
+    value: [] as ReadonlyArray<HTMLFormControl>,
+  });
+
   protected _internals = this.attachInternals();
 
   protected override get template(): string | null {
-    return `<slot></slot>`;
+    return `
+      <style>
+        :host {
+          display: block;
+        }
+      </style>
+      <slot></slot>`;
   }
 
   get controls(): Array<HTMLFormControl> {
-    return Array.from(this._controls);
+    return Array.from(this._controls.value);
   }
 
-  protected override holdSlots(): void {
-    super.holdSlots();
+  override assignSlots(): void {
+    super.assignSlots();
     const controls = this.assignedControls();
-    this.changeControls(controls);
+    this._controls.value = controls;
   }
 
-  protected override releaseSlots(): void {
-    super.releaseSlots();
-    this.changeControls([]);
+  override propertyChanged(
+    name: string | symbol,
+    oldValue: unknown,
+    newValue: unknown,
+  ): void {
+    if (name === 'controls') {
+      const curr = newValue as ReadonlyArray<HTMLFormControl>;
+      const prev = oldValue as ReadonlyArray<HTMLFormControl>;
+      return this.controlsChanged(curr, prev);
+    }
+    super.propertyChanged(name, oldValue, newValue);
   }
 
-  protected changeControls(newValue: ReadonlyArray<HTMLFormControl>): boolean {
-    const oldValue = this._controls;
-    if (isEqual(newValue, oldValue)) return false;
-
-    this._controls = newValue;
-
+  protected controlsChanged(
+    newValue: ReadonlyArray<HTMLFormControl>,
+    oldValue: ReadonlyArray<HTMLFormControl>,
+  ): void {
     for (const control of oldValue) {
       this.unsubscribe(control, 'invalid', this.handleInvalid);
       this.unsubscribe(control, 'change', this.handleChange);
@@ -46,7 +65,7 @@ export class IpeFieldElement extends IpeElement {
       if (control.form != null) {
         this.subscribe(control.form, 'reset', this.handleReset);
       }
-      const errormessage = getErrorMessage(control);
+      const errormessage = getErrorMessageElement(control);
       if (errormessage != null && errormessage.innerText.length > 0) {
         this._invalidated = true;
         this.ariaInvalid = 'true';
@@ -54,7 +73,6 @@ export class IpeFieldElement extends IpeElement {
         control.setCustomValidity(errormessage.innerText);
       }
     }
-    return true;
   }
 
   protected assignedControls(): Array<HTMLFormControl> {
@@ -66,14 +84,14 @@ export class IpeFieldElement extends IpeElement {
 
   protected handleInvalid(event: Event): void {
     const target = event.target;
-    const control = this._controls.find((control) => control === target);
+    const control = this._controls.value.find((c) => c === target);
     if (control == null) return;
 
     this.ariaInvalid = 'true';
     this._internals.ariaInvalid = 'true';
     this._invalidated = true;
 
-    const errormessage = getErrorMessage(control);
+    const errormessage = getErrorMessageElement(control);
     if (errormessage == null) return;
 
     // Prevent the browser alerts
@@ -104,16 +122,16 @@ export class IpeFieldElement extends IpeElement {
     if (!this._invalidated) return;
 
     const target = event.target;
-    const control = this._controls.find((control) => control === target);
+    const control = this._controls.value.find((c) => c === target);
     if (control == null) return;
 
     control.setCustomValidity('');
-    const invalids = this._controls.filter((c) => !c.checkValidity());
+    const invalids = this._controls.value.filter((c) => !c.checkValidity());
     if (invalids.length > 0) return;
 
     this.ariaInvalid = 'false';
     this._internals.ariaInvalid = 'false';
-    const errormessage = getErrorMessage(control);
+    const errormessage = getErrorMessageElement(control);
     if (errormessage == null) return;
 
     errormessage.replaceChildren();
@@ -123,25 +141,15 @@ export class IpeFieldElement extends IpeElement {
     this._invalidated = false;
     this.ariaInvalid = 'false';
     this._internals.ariaInvalid = 'false';
-    for (const control of this._controls) {
+    for (const control of this._controls.value) {
       control.setCustomValidity('');
-      const errormessage = getErrorMessage(control);
+      const errormessage = getErrorMessageElement(control);
       if (errormessage != null) {
         errormessage.ariaLive = 'off';
         errormessage.replaceChildren();
       }
     }
   }
-}
-
-function getErrorMessage(element: Element | null): HTMLElement | null {
-  if (element == null) return null;
-  const id = element.getAttribute('aria-errormessage');
-  if (id == null || id === '') return null;
-  const errormessage = element.ownerDocument.querySelector(`#${id}`);
-  if (errormessage == null) return null;
-  if (!(errormessage instanceof HTMLElement)) return null;
-  return errormessage;
 }
 
 window.IpeFieldElement = IpeFieldElement;

@@ -26,6 +26,11 @@
       <form class="table">
         <ipe-field>
           <template shadowrootmode="open">
+            <style>
+              :host {
+                display: block;
+              }
+            </style>
             <slot></slot>
           </template>
           <label for="email">E-mail</label>
@@ -33,15 +38,23 @@
             id="email"
             type="email"
             name="email"
+            value="email@example.com"
             required
             aria-errormessage="email-errormessage"
             data-value-missing="Please, fill this with your e-mail."
             data-type-mismatch="Please, inform a valid e-mail."
           />
-          <small class="errormessage" id="email-errormessage"></small>
+          <small class="errormessage" id="email-errormessage">
+            Choose a different email
+          </small>
         </ipe-field>
         <ipe-field>
           <template shadowrootmode="open">
+            <style>
+              :host {
+                display: block;
+              }
+            </style>
             <slot></slot>
           </template>
           <label for="password">Password</label>

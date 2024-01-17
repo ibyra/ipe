@@ -1,8 +1,13 @@
-import { BooleanAttr, StringAttr } from './attributes';
-import { isBoolean, isString } from './commons';
 import type { HTMLFormControl } from './dom';
-import { BooleanFData, StringFData } from './formdata';
 import { IpeElement } from './ipe-element';
+import {
+  FormProperty,
+  type FormHost,
+  attributeParsers,
+  formDataParsers,
+  type FormProp,
+  FormState,
+} from './property';
 
 export type FormValidity = {
   flags: ValidityStateFlags;
@@ -14,20 +19,56 @@ export type FormValidity = {
  */
 export abstract class IpeElementForm
   extends IpeElement
-  implements HTMLFormControl
+  implements HTMLFormControl, FormHost
 {
-  protected _disabled = false;
-  protected _disabledAttr = new BooleanAttr('disabled', this._disabled);
+  #formPropByName = new Map<string, FormProp<unknown>>();
 
-  protected _readOnly = false;
-  protected _readOnlyAttr = new BooleanAttr('readonly', this._readOnly);
-  protected _readOnlyFData = new BooleanFData('readonly', this._readOnly);
+  /**
+   * The form state of this element that will be submitted.
+   */
+  public readonly formState = new FormState();
 
-  protected _required = false;
-  protected _requiredAttr = new BooleanAttr('required', this._required);
-  protected _requiredFData = new BooleanFData('required', this._required);
+  /**
+   * The form value of this element that will be submitted.
+   */
+  public abstract get formValue(): FormData | null;
 
-  protected _dirty = false;
+  /**
+   * Returns an `FormValidity` of the element.
+   */
+  public get formValidity(): FormValidity {
+    const flags = {
+      customError: this._customError.length > 0,
+    };
+    const messages = {
+      customError: this._customError,
+    };
+    return { flags, messages };
+  }
+
+  protected _disabled = new FormProperty(this, {
+    name: 'disabled',
+    value: false,
+    cast: Boolean,
+    attribute: attributeParsers.bool,
+    form: formDataParsers.bool,
+  });
+
+  protected _readOnly = new FormProperty(this, {
+    name: 'readonly',
+    value: false,
+    cast: Boolean,
+    attribute: attributeParsers.bool,
+    form: formDataParsers.bool,
+  });
+
+  protected _required = new FormProperty(this, {
+    name: 'required',
+    value: false,
+    cast: Boolean,
+    attribute: attributeParsers.bool,
+    form: formDataParsers.bool,
+  });
 
   protected _userInteracted = false;
 
@@ -38,6 +79,14 @@ export abstract class IpeElementForm
   protected _customError = '';
 
   protected _internals = this.attachInternals();
+
+  addFormProperty(property: FormProp<unknown>): void {
+    this.#formPropByName.set(property.name, property);
+  }
+
+  removeFormProperty(property: FormProp<unknown>): void {
+    this.#formPropByName.delete(property.name);
+  }
 
   get form(): HTMLFormElement | null {
     return this._internals.form;
@@ -60,30 +109,24 @@ export abstract class IpeElementForm
   }
 
   get disabled(): boolean {
-    return this._disabled;
+    return this._disabled.value;
   }
   set disabled(value: boolean) {
-    if (!isBoolean(value)) return;
-    if (!this.changeDisabled(value)) return;
-    this.saveFormValue();
+    this._disabled.value = value;
   }
 
   get readOnly(): boolean {
-    return this._readOnly;
+    return this._readOnly.value;
   }
   set readOnly(value: boolean) {
-    if (!isBoolean(value)) return;
-    if (!this.changeReadOnly(value)) return;
-    this.saveFormValue();
+    this._readOnly.value = value;
   }
 
   get required(): boolean {
-    return this._required;
+    return this._required.value;
   }
   set required(value: boolean) {
-    if (!isBoolean(value)) return;
-    if (!this.changeRequired(value)) return;
-    this.saveFormValue();
+    this._readOnly.value = value;
   }
 
   checkValidity(): boolean {
@@ -99,52 +142,57 @@ export abstract class IpeElementForm
     this.saveFormValidity();
   }
 
-  protected override initProperties(): void {
-    super.initProperties();
-    this.changeDisabled(this._disabledAttr.get(this));
-    this.changeReadOnly(this._readOnlyAttr.get(this));
-    this.changeRequired(this._requiredAttr.get(this));
-  }
-
   /**
-   * This callback is called during `formResetCallback`. It should be extended
-   * to set the values of the properties when an form reset happens.
+   * Stores the value and the state of the element into the form. If the element
+   * is disabled, no value or state is stored. If the element was not
+   * user-interacted, no state is stored.
    */
-  protected resetProperties(): void {
-    return;
+  saveForm(): void {
+    if (this._internals.form == null) return;
+    if (this._disabled.value) {
+      this._internals.setFormValue(null, null);
+      return;
+    }
+    if (this._userInteracted) {
+      const state = this.formState.toFormData();
+      const value = this.formValue;
+      this._internals.setFormValue(value, state);
+      this.saveFormValidity();
+      return;
+    }
+    const value = this.formValue;
+    this._internals.setFormValue(value, null);
+    this.saveFormValidity();
   }
 
-  protected override holdListeners(): void {
-    super.holdListeners();
+  override connectedCallback(): void {
+    super.connectedCallback();
     this.addEventListener('invalid', this.handleInvalid);
   }
 
-  protected override releaseListeners(): void {
-    super.releaseListeners();
+  override disconnectedCallback(): void {
+    super.disconnectedCallback();
     this.removeEventListener('invalid', this.handleInvalid);
   }
 
-  protected override attributeChangedCallback(
-    name: string,
-    oldValue: string | null,
-    newValue: string | null,
+  override propertyChanged(
+    name: string | symbol,
+    oldValue: unknown,
+    newValue: unknown,
   ): void {
-    super.attributeChangedCallback(name, oldValue, newValue);
-    if (name === this._disabledAttr.name) {
-      if (!this.changeDisabled(this._disabledAttr.from(newValue))) return;
-      this.saveFormValue();
-      return;
+    if (name === this._disabled.name) {
+      const curr = newValue as boolean;
+      return this.disabledChanged(curr);
     }
-    if (name === this._readOnlyAttr.name) {
-      if (!this.changeReadOnly(this._readOnlyAttr.from(newValue))) return;
-      this.saveFormValue();
-      return;
+    if (name === this._readOnly.name) {
+      const curr = newValue as boolean;
+      return this.readOnlyChanged(curr);
     }
-    if (name === this._requiredAttr.name) {
-      if (!this.changeRequired(this._requiredAttr.from(newValue))) return;
-      this.saveFormValue();
-      return;
+    if (name === this._required.name) {
+      const curr = newValue as boolean;
+      return this.requiredChanged(curr);
     }
+    super.propertyChanged(name, oldValue, newValue);
   }
 
   /**
@@ -152,9 +200,9 @@ export abstract class IpeElementForm
    * disassociates the element from a form element.
    * @param form
    */
-  protected formAssociatedCallback(form: HTMLFormElement | null): void {
+  formAssociatedCallback(form: HTMLFormElement | null): void {
     if (form == null) return;
-    this.saveFormValue();
+    this.saveForm();
   }
 
   /**
@@ -163,20 +211,21 @@ export abstract class IpeElementForm
    * @param disabled
    * @returns
    */
-  protected formDisabledCallback(disabled: boolean): void {
-    if (!this.changeDisabled(disabled)) return;
-    this.saveFormValue();
+  formDisabledCallback(disabled: boolean): void {
+    this._disabled.value = disabled;
+    this.saveForm();
   }
 
   /**
    * Called when the form is reset.
    */
-  protected formResetCallback(): void {
+  formResetCallback(): void {
     this._internals.ariaInvalid = 'false';
     this.ariaInvalid = 'false';
     this._userInteracted = false;
-    this.resetProperties();
-    this.saveFormValue();
+    for (const formProperty of this.#formPropByName.values()) {
+      formProperty.formReset();
+    }
     return;
   }
 
@@ -199,34 +248,9 @@ export abstract class IpeElementForm
     if (mode !== 'restore') return;
     if (!(state instanceof FormData)) return;
     this._userInteracted = true;
-    this.setFormState(state);
-    this.saveFormValue();
-  }
-
-  /**
-   * Stores the value and the state of the element into the form. If the element
-   * is disabled, no value or state is stored. If the element was not
-   * user-interacted, no state is stored.
-   *
-   * @see {getFormValue}
-   * @see {getFormState}
-   */
-  protected saveFormValue(): void {
-    if (this._internals.form == null) return;
-    if (this._disabled) {
-      this._internals.setFormValue(null, null);
-      return;
+    for (const formProperty of this.#formPropByName.values()) {
+      formProperty.formRestore(state);
     }
-    if (this._userInteracted) {
-      const state = this.getFormState();
-      const value = this.getFormValue();
-      this._internals.setFormValue(value, state);
-      this.saveFormValidity();
-      return;
-    }
-    const value = this.getFormValue();
-    this._internals.setFormValue(value, null);
-    this.saveFormValidity();
   }
 
   /**
@@ -234,7 +258,7 @@ export abstract class IpeElementForm
    * @see {getFormValidity}
    */
   protected saveFormValidity(): void {
-    const { flags, messages } = this.getFormValidity();
+    const { flags, messages } = this.formValidity;
     const keys: Array<keyof ValidityStateFlags> = [
       'customError',
       'valueMissing',
@@ -261,45 +285,6 @@ export abstract class IpeElementForm
   }
 
   /**
-   * Returns an `FormValidity` of the element.
-   */
-  protected getFormValidity(): FormValidity {
-    const flags = {
-      customError: this._customError.length > 0,
-    };
-    const messages = {
-      customError: this._customError,
-    };
-    return { flags, messages };
-  }
-
-  /**
-   * Returns the form value of this element.
-   */
-  protected getFormValue(): FormData | null {
-    return null;
-  }
-
-  /**
-   * Returns the form state of this element.
-   */
-  protected getFormState(): FormData {
-    const state = new FormData();
-    this._readOnlyFData.set(state, this._readOnly);
-    this._requiredFData.set(state, this._required);
-    return state;
-  }
-
-  /**
-   * Sets the properties of this element with the given state.
-   */
-  protected setFormState(state: FormData): void {
-    this.changeReadOnly(this._readOnlyFData.get(state));
-    this.changeRequired(this._requiredFData.get(state));
-    return;
-  }
-
-  /**
    * Dispatches an `input` event in a new event loop task.
    */
   protected notifyInput(): void {
@@ -323,34 +308,19 @@ export abstract class IpeElementForm
     }, 0);
   }
 
-  protected changeDisabled(newValue: boolean): boolean {
-    const oldValue = this._disabled;
-    if (newValue === oldValue) return false;
-    this._disabled = newValue;
-    this._disabledAttr.set(this, newValue);
+  protected disabledChanged(newValue: boolean): void {
     this._internals.ariaDisabled = newValue ? 'true' : 'false';
     this.ariaDisabled = newValue ? 'true' : 'false';
-    return true;
   }
 
-  protected changeReadOnly(newValue: boolean): boolean {
-    const oldValue = this._readOnly;
-    if (newValue === oldValue) return false;
-    this._readOnly = newValue;
-    this._readOnlyAttr.set(this, newValue);
+  protected readOnlyChanged(newValue: boolean): void {
     this._internals.ariaReadOnly = newValue ? 'true' : 'false';
     this.ariaReadOnly = newValue ? 'true' : 'false';
-    return true;
   }
 
-  protected changeRequired(newValue: boolean): boolean {
-    const oldValue = this._required;
-    if (newValue === oldValue) return false;
-    this._required = newValue;
-    this._requiredAttr.set(this, newValue);
+  protected requiredChanged(newValue: boolean): void {
     this._internals.ariaRequired = newValue ? 'true' : 'false';
     this.ariaRequired = newValue ? 'true' : 'false';
-    return true;
   }
 
   protected handleInvalid(): void {
@@ -372,92 +342,34 @@ export abstract class IpeElementForm
  * elements can extend.
  */
 export abstract class IpeElementFormSingleValue extends IpeElementForm {
-  protected _name: string = '';
-  protected _nameAttr = new StringAttr('name', this._name);
-  protected _nameFData = new StringFData('name', this._name);
+  protected _name = new FormProperty(this, {
+    name: 'name',
+    value: '',
+    cast: String,
+    attribute: attributeParsers.str,
+    form: formDataParsers.str,
+  });
 
-  protected _autocomplete: AutoFill = '';
-  protected _autocompleteAttr = new StringAttr(
-    'autocomplete',
-    this._autocomplete,
-  );
-  protected _autocompleteFData = new StringFData(
-    'autocomplete',
-    this._autocomplete,
-  );
+  protected _autocomplete = new FormProperty(this, {
+    name: 'autocomplete',
+    value: '',
+    cast: String,
+    attribute: attributeParsers.str,
+    form: formDataParsers.str,
+  });
 
   get name(): string {
-    return this._name;
+    return this._name.value;
   }
   set name(value: string) {
-    if (!isString(value)) return;
-    if (!this.changeName(value)) return;
-    this.saveFormValue();
+    this._name.value = value;
   }
 
   get autocomplete(): AutoFill {
-    return this._autocomplete;
+    return this._autocomplete.value as AutoFill;
   }
   set autocomplete(value: AutoFill) {
-    // TODO: Add Autofill validation here.
-    if (!isString(value)) return;
-    if (!this.changeAutocomplete(value)) return;
-    this.saveFormValue();
-  }
-
-  protected override initProperties(): void {
-    super.initProperties();
-    this.changeName(this._nameAttr.get(this));
-    this.changeAutocomplete(this._autocompleteAttr.get(this));
-  }
-
-  protected override attributeChangedCallback(
-    name: string,
-    oldValue: string | null,
-    newValue: string | null,
-  ): void {
-    super.attributeChangedCallback(name, oldValue, newValue);
-    if (name === this._nameAttr.name) {
-      const name = this._nameAttr.from(newValue);
-      if (!this.changeName(name)) return;
-      this.saveFormValue();
-      return;
-    }
-    if (name === this._autocompleteAttr.name) {
-      const autocomplete = this._autocompleteAttr.from(newValue);
-      if (!this.changeAutocomplete(autocomplete)) return;
-      this.saveFormValue();
-      return;
-    }
-  }
-
-  protected override getFormState(): FormData {
-    const state = super.getFormState();
-    this._nameFData.set(state, this._name);
-    this._autocompleteFData.set(state, this._autocomplete);
-    return state;
-  }
-
-  protected override setFormState(state: FormData): void {
-    super.setFormState(state);
-    this.changeName(this._nameFData.get(state));
-    this.changeAutocomplete(this._autocompleteFData.get(state));
-  }
-
-  protected changeName(newValue: string): boolean {
-    const oldValue = this._name;
-    if (newValue === oldValue) return false;
-    this._name = newValue;
-    this._nameAttr.set(this, newValue);
-    return true;
-  }
-
-  protected changeAutocomplete(newValue: string): boolean {
-    const oldValue = this._autocomplete;
-    if (newValue === oldValue) return false;
-    this._autocomplete = newValue as AutoFill;
-    this._autocompleteAttr.set(this, newValue);
-    return true;
+    this._autocomplete.value = value;
   }
 
   static override get observedAttributes(): Array<string> {
