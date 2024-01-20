@@ -1,137 +1,135 @@
-import { CheckedAttr, StringAttr } from './attributes';
-import { isChecked, isString } from './commons';
+import { asChecked } from './commons';
 import { type Checked } from './dom';
-import { CheckedFData, StringFData } from './formdata';
 import {
   type FormValidity,
   IpeElementFormSingleValue,
 } from './ipe-element-form';
+import { FormProperty, attributeParsers, formDataParsers } from './property';
 
 export class IpeCheckboxElement extends IpeElementFormSingleValue {
-  protected _value: string = 'on';
-  protected _valueAttr = new StringAttr('value', this._value);
-  protected _valueFData = new StringFData('value', this._value);
+  protected _value = new FormProperty(this, {
+    name: 'value',
+    value: 'on',
+    cast: String,
+    form: formDataParsers.str,
+  });
 
-  protected _checked: Checked = 'false';
-  protected _checkedAttr = new CheckedAttr('checked', this._checked);
-  protected _checkedFData = new CheckedFData('checked', this._checked);
+  protected _checked = new FormProperty(this, {
+    name: 'checked',
+    value: 'false' as Checked,
+    cast: asChecked,
+    attribute: attributeParsers.checked,
+    form: formDataParsers.checked,
+  });
+
+  protected override get template(): string | null {
+    return `
+      <style>
+        :host {
+          display: inline-block;
+          height: 1.125em;
+          width: 1.125em;
+          background-color: white;
+          border: solid 0.125em dimgray;
+          border-radius: 0.125em;
+          overflow: hidden;
+          vertical-align: middle;
+          line-height: 1;
+          cursor: pointer;
+        }
+        :host([checked='true']) {
+          background-color: black;
+          box-shadow:
+            inset 0.25em 0.25em 0 white,
+            inset -0.25em -0.25em 0 white;
+        }
+        :host([checked='mixed']) {
+          background-color: gray;
+          box-shadow:
+            inset 0.25em 0.25em 0 white,
+            inset -0.25em -0.25em 0 white;
+        }
+        :host([aria-invalid='true']) {
+          border-color: red;
+        }
+      </style>
+      <slot></slot>
+    `;
+  }
 
   get value(): string {
-    return this._value;
+    return this._value.value;
   }
   set value(value: string) {
-    if (!isString(value)) return;
-    if (!this.changeValue(value)) return;
-    this.saveFormValue();
+    this._value.value = value;
   }
 
   get checked(): Checked {
-    return this._checked;
+    return this._checked.value;
   }
   set checked(value: Checked) {
-    if (!isChecked(value)) return;
-    if (!this.changeChecked(value)) return;
-    this.saveFormValue();
+    this._checked.value = value;
   }
 
-  get defaultValue(): string {
-    return this._valueAttr.get(this);
-  }
-  set defaultValue(value: string) {
-    if (!this._valueAttr.set(this, value)) return;
-  }
-
-  get defaultChecked(): Checked {
-    return this._checkedAttr.get(this);
-  }
-  set defaultChecked(value: Checked) {
-    if (!this._checkedAttr.set(this, value)) return;
-  }
-
-  protected get dirtyChecked(): boolean {
-    return this._value !== this._checkedAttr.get(this);
-  }
-
-  protected override initProperties(): void {
-    super.initProperties();
-    this._internals.role = 'checkbox';
-    if (!this.hasAttribute('tabindex')) {
-      this.tabIndex = 0;
-    }
-    this.changeValue(this._valueAttr.get(this));
-    this.changeChecked(this._checkedAttr.get(this));
-  }
-
-  protected override resetProperties(): void {
-    this.changeValue(this.defaultValue);
-    this.changeChecked(this.defaultChecked);
-  }
-
-  protected override holdListeners(): void {
-    super.holdListeners();
-    this.addEventListener('click', this.handleClick);
-    this.addEventListener('keydown', this.handleKeydown);
-  }
-
-  protected override releaseListeners(): void {
-    super.releaseListeners();
-    this.removeEventListener('keydown', this.handleKeydown);
-    this.removeEventListener('click', this.handleClick);
-  }
-
-  protected override getFormValidity(): FormValidity {
-    const { flags, messages } = super.getFormValidity();
-    flags.valueMissing = this.required && this._checked !== 'true';
+  public override get formValidity(): FormValidity {
+    const { flags, messages } = super.formValidity;
+    flags.valueMissing = this.required && this._checked.value !== 'true';
     messages.valueMissing = this.dataset['valueMissing'] ?? 'Required';
     return { flags, messages };
   }
 
-  protected override getFormState(): FormData {
-    const state = super.getFormState();
-    this._valueFData.set(state, this._value);
-    this._checkedFData.set(state, this._checked);
-    return state;
-  }
-
-  protected override setFormState(state: FormData): void {
-    super.setFormState(state);
-    this.changeValue(this._valueFData.get(state));
-    this.changeChecked(this._checkedFData.get(state));
-  }
-
-  protected override getFormValue(): FormData | null {
-    if (this._checked !== 'true') return null;
+  public override get formValue(): FormData | null {
+    if (this._checked.value !== 'true') return null;
     const value = new FormData();
-    value.set(this._name, this._value);
+    value.set(this._name.value, this._value.value);
     return value;
   }
 
-  protected changeValue(newValue: string): boolean {
-    const oldValue = this._value;
-    if (newValue === oldValue) return false;
-    this._value = newValue;
-    this._dirty = newValue !== this.defaultValue;
-    return true;
+  override connectedCallback(): void {
+    super.connectedCallback();
+    this._internals.role = 'checkbox';
+
+    if (this.hasAttribute('value')) {
+      this._value.init(this.getAttribute('value') ?? this._value.value);
+    }
+    if (!this.hasAttribute('tabindex')) {
+      this.tabIndex = 0;
+    }
+    this.addEventListener('click', this.handleClick);
+    this.addEventListener('keydown', this.handleKeydown);
   }
 
-  protected changeChecked(newValue: Checked): boolean {
-    const oldValue = this._checked;
-    if (newValue === oldValue) return false;
-    this._checked = newValue;
+  override disconnectedCallback(): void {
+    super.disconnectedCallback();
+    this.removeEventListener('keydown', this.handleKeydown);
+    this.removeEventListener('click', this.handleClick);
+  }
+
+  override propertyChanged(
+    name: string | symbol,
+    oldValue: unknown,
+    newValue: unknown,
+  ): void {
+    if (name === this._checked.name) {
+      const curr = newValue as Checked;
+      return this.checkedChanged(curr);
+    }
+    return super.propertyChanged(name, oldValue, newValue);
+  }
+
+  protected checkedChanged(newValue: Checked): void {
     this._internals.ariaChecked = newValue;
     this.ariaChecked = newValue;
-    return true;
   }
 
   protected handleClick(event: MouseEvent): void {
     // Prevent double handling click when the checkbox is inside a <label>.
     event.preventDefault();
     this._userInteracted = true;
-    const checked = this._checked === 'false' ? 'true' : 'false';
-    if (!this.changeChecked(checked)) return;
+    const checked = this._checked.value === 'false' ? 'true' : 'false';
+    this._checked.value = checked;
     this.notifyInput();
     this.notifyChange();
-    this.saveFormValue();
   }
 
   protected handleKeydown(event: KeyboardEvent): void {
@@ -140,11 +138,14 @@ export class IpeCheckboxElement extends IpeElementFormSingleValue {
     // Prevent space scroll
     event.preventDefault();
     this._userInteracted = true;
-    const checked = this._checked === 'false' ? 'true' : 'false';
-    if (!this.changeChecked(checked)) return;
+    const checked = this._checked.value === 'false' ? 'true' : 'false';
+    this._checked.value = checked;
     this.notifyInput();
     this.notifyChange();
-    this.saveFormValue();
+  }
+
+  static override get observedAttributes(): string[] {
+    return [...super.observedAttributes, 'checked', 'value'];
   }
 }
 

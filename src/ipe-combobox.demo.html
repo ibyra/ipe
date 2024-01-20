@@ -7,61 +7,27 @@
 
     <link rel="stylesheet" href="https://unpkg.com/missing.css@1.1.1" />
     <style>
-      ipe-combobox {
-        display: block;
-        position: relative;
-        line-height: 1;
-      }
       ipe-combobox::part(input) {
-        display: block;
-        width: 100%;
-        height: 2.5em;
-        padding: 0.25em;
-        border: solid 1px var(--graphical-fg);
-        background-color: var(--box-bg);
-        cursor: pointer;
-      }
-      ipe-combobox::part(picked) {
-        position: absolute;
-        display: flex;
-        flex-direction: row;
-        gap: 0.5em;
-        top: 50%;
-        left: 0.25em;
-        translate: 0 -50%;
-        pointer-events: none;
+        border: solid 2px var(--plain-graphical-fg);
+        background-color: var(--plain-bg);
       }
       ipe-combobox::part(popover) {
-        box-sizing: border-box;
-        display: hidden;
-        margin: 0;
-        border: none;
-        background-color: var(--box-bg);
+        background-color: var(--plain-bg);
+        color: var(--plain-fg);
       }
-      ipe-combobox::part(popover):popover-open {
+      ipe-combobox[open]::part(popover) {
         display: flex;
         flex-direction: column;
-        background-color: var(--box-bg);
       }
-      ipe-option[slot='picked'] {
-        display: none;
-      }
-      ipe-option[slot='picked'][aria-selected='true'] {
-        display: block;
-        order: var(--ipe-combobox-index);
-      }
-      ipe-option[slot='popover'] {
-        display: block;
-        padding: 0.25em;
-        line-height: 1;
-        cursor: pointer;
-        color: var(--fg);
-      }
+
       ipe-option[slot='popover'][active] {
-        background-color: var(--interactive-bg);
+        background-color: rgba(127, 200, 255, 0.1);
       }
-      ipe-option[slot='popover'][aria-selected='true'] {
-        color: var(--accent);
+      ipe-option[slot='popover'][selected] {
+        background-color: rgba(127, 200, 255, 0.2);
+      }
+      ipe-option[slot='popover'][active][selected] {
+        background-color: rgba(127, 200, 255, 0.3);
       }
     </style>
     <script type="module" src="./ipe-combobox.ts"></script>
@@ -72,11 +38,76 @@
       <h1><code>ipe-combobox</code> demo</h1>
       <form class="table">
         <p>
-          <label for="combobox-single">Select the config</label>
-          <ipe-combobox id="combobox-single" name="user">
+          <label for="user">Select the config</label>
+          <ipe-combobox id="user" name="user" required>
             <template shadowrootmode="open">
-              <input part="input" type="button" popovertarget="popover" />
-              <slot name="picked" part="picked"></slot>
+              <style>
+                :host {
+                  display: block;
+                  position: relative;
+                  box-sizing: border-box;
+                }
+
+                #input {
+                  box-sizing: border-box;
+                  display: block;
+                  width: 100%;
+                  height: 2.5em;
+                  border: solid 2px dimgray;
+                  background-color: white;
+                  cursor: pointer;
+                }
+
+                #picked {
+                  display: flex;
+                  flex-direction: row;
+                  position: absolute;
+                  box-sizing: border-box;
+                  gap: 0.5em;
+                  top: 50%;
+                  left: 0.5em;
+                  translate: 0 -50%;
+                  pointer-events: none;
+                }
+                #picked::slotted(*) {
+                  display: none;
+                }
+                #picked::slotted([selected]) {
+                  display: unset;
+                }
+
+                #popover {
+                  display: hidden;
+                  box-sizing: border-box;
+                  margin: 0;
+                  border: solid 2px dimgray;
+                  padding: 0;
+                  background-color: white;
+                }
+                #popover:popover-open {
+                  display: unset;
+                }
+                #popover::slotted(*) {
+                  padding: 0.25em;
+                  cursor: pointer;
+                }
+                #popover::slotted([active]) {
+                  background-color: rgba(255, 255, 255, 0.1);
+                }
+                #popover::slotted([selected]) {
+                  background-color: rgba(255, 255, 255, 0.2);
+                }
+                #popover::slotted([active][selected]) {
+                  background-color: rgba(255, 255, 255, 0.3);
+                }
+              </style>
+              <input
+                id="input"
+                part="input"
+                type="button"
+                popovertarget="popover"
+              />
+              <slot id="picked" name="picked" part="picked"></slot>
               <slot></slot>
               <slot
                 id="popover"
@@ -94,11 +125,82 @@
           </ipe-combobox>
         </p>
         <p>
-          <label for="combobox-multiple">Select some fruits</label>
-          <ipe-combobox id="combobox-multiple" multiple name="fruits">
+          <label for="fruits">Select two or three fruit</label>
+          <ipe-combobox
+            id="fruits"
+            name="fruits"
+            multiple
+            minlength="2"
+            maxlength="3"
+          >
             <template shadowrootmode="open">
-              <input part="input" type="button" popovertarget="popover" />
-              <slot name="picked" part="picked"></slot>
+              <style>
+                :host {
+                  display: block;
+                  position: relative;
+                  box-sizing: border-box;
+                }
+
+                #input {
+                  box-sizing: border-box;
+                  display: block;
+                  width: 100%;
+                  height: 2.5em;
+                  border: solid 2px dimgray;
+                  background-color: white;
+                  cursor: pointer;
+                }
+
+                #picked {
+                  display: flex;
+                  flex-direction: row;
+                  position: absolute;
+                  box-sizing: border-box;
+                  gap: 0.5em;
+                  top: 50%;
+                  left: 0.5em;
+                  translate: 0 -50%;
+                  pointer-events: none;
+                }
+                #picked::slotted(*) {
+                  display: none;
+                }
+                #picked::slotted([selected]) {
+                  display: unset;
+                }
+
+                #popover {
+                  display: hidden;
+                  box-sizing: border-box;
+                  margin: 0;
+                  border: solid 2px dimgray;
+                  padding: 0;
+                  background-color: white;
+                }
+                #popover:popover-open {
+                  display: unset;
+                }
+                #popover::slotted(*) {
+                  padding: 0.25em;
+                  cursor: pointer;
+                }
+                #popover::slotted([active]) {
+                  background-color: rgba(255, 255, 255, 0.1);
+                }
+                #popover::slotted([selected]) {
+                  background-color: rgba(255, 255, 255, 0.2);
+                }
+                #popover::slotted([active][selected]) {
+                  background-color: rgba(255, 255, 255, 0.3);
+                }
+              </style>
+              <input
+                id="input"
+                part="input"
+                type="button"
+                popovertarget="popover"
+              />
+              <slot id="picked" name="picked" part="picked"></slot>
               <slot></slot>
               <slot
                 id="popover"

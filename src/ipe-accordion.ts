@@ -1,8 +1,15 @@
 import { isEqual } from 'moderndash';
-import { BooleanAttr } from './attributes';
-import { isBoolean, isHTMLDisclosure } from './commons';
+import {
+  getFirstOption,
+  getLastOption,
+  getSelectedOptions,
+  isHTMLDisclosure,
+  nextOptionOf,
+  previousOptionOf,
+} from './commons';
 import { type HTMLOptlist, type HTMLDisclosure } from './dom';
 import { IpeElement } from './ipe-element';
+import { Property, attributeParsers } from './property';
 
 // TODO: Implement min/max length, that allows the number of open items
 
@@ -12,58 +19,78 @@ export class IpeAccordionElement
   extends IpeElement
   implements HTMLOptlist<HTMLDisclosure>
 {
-  protected _disabled = false;
-  protected _disabledAttr = new BooleanAttr('disabled', this._disabled);
+  protected _disabled = new Property(this, {
+    name: 'disabled',
+    value: false,
+    cast: Boolean,
+    attribute: attributeParsers.bool,
+  });
 
-  protected _multiple = false;
-  protected _multipleAttr = new BooleanAttr('multiple', this._multiple);
+  protected _multiple = new Property(this, {
+    name: 'multiple',
+    value: false,
+    cast: Boolean,
+    attribute: attributeParsers.bool,
+  });
 
-  protected _required = false;
-  protected _requiredAttr = new BooleanAttr('required', this._required);
+  protected _required = new Property(this, {
+    name: 'required',
+    value: false,
+    cast: Boolean,
+    attribute: attributeParsers.bool,
+  });
 
-  protected _options = [] as ReadonlyArray<HTMLDisclosure>;
+  protected _options = new Property(this, {
+    name: 'options',
+    equals: isEqual,
+    value: [] as ReadonlyArray<HTMLDisclosure>,
+  });
 
   protected _internals = this.attachInternals();
 
   protected override get template(): string {
-    return `<slot></slot>`;
+    return `
+      <style>
+        :host {
+          display: block;
+        }
+      </style>
+      <slot></slot>
+    `;
   }
 
   get disabled(): boolean {
-    return this._disabled;
+    return this._disabled.value;
   }
   set disabled(value: boolean) {
-    if (!isBoolean(value)) return;
-    if (!this.changeDisabled(value)) return;
+    this._disabled.value = value;
   }
 
   get multiple(): boolean {
-    return this._multiple;
+    return this._multiple.value;
   }
   set multiple(value: boolean) {
-    if (!isBoolean(value)) return;
-    if (!this.changeMultiple(value)) return;
+    this._multiple.value = value;
   }
 
   get required(): boolean {
-    return this._required;
+    return this._required.value;
   }
   set required(value: boolean) {
-    if (!isBoolean(Boolean)) return;
-    if (!this.changeRequired(value)) return;
+    this._required.value = value;
   }
 
   get options(): Array<HTMLDisclosure> {
-    return Array.from(this._options);
+    return Array.from(this._options.value);
   }
 
   get selectedOption(): HTMLDisclosure | null {
-    const options = this.getSelected();
+    const options = getSelectedOptions(this._options.value);
     return options[0] ?? null;
   }
 
   get selectedOptions(): Array<HTMLDisclosure> {
-    return this.getSelected();
+    return getSelectedOptions(this._options.value);
   }
 
   toggle(option: HTMLDisclosure): void {
@@ -79,85 +106,90 @@ export class IpeAccordionElement
   }
 
   first(): HTMLDisclosure | null {
-    return this.getFirst();
+    return getFirstOption(this._options.value);
   }
 
   last(): HTMLDisclosure | null {
-    return this.getLast();
+    return getLastOption(this._options.value);
   }
 
   next(): HTMLDisclosure | null {
-    const focused = this._options.find((o) => o === document.activeElement);
-    const activeElement = focused ?? this.selectedOption ?? this.getFirst();
+    const focused = this._options.value.find(
+      (option) => option === document.activeElement,
+    );
+    const activeElement =
+      focused ?? this.selectedOption ?? getFirstOption(this._options.value);
     if (activeElement == null) return null;
-    return this.nextOf(activeElement);
+    return nextOptionOf(this._options.value, activeElement);
   }
 
   previous(): HTMLDisclosure | null {
-    const focused = this._options.find((o) => o === document.activeElement);
-    const activeElement = focused ?? this.selectedOption ?? this.getFirst();
+    const focused = this._options.value.find(
+      (option) => option === document.activeElement,
+    );
+    const activeElement =
+      focused ?? this.selectedOption ?? getFirstOption(this._options.value);
     if (activeElement == null) return null;
-    return this.previousOf(activeElement);
+    return previousOptionOf(this._options.value, activeElement);
   }
 
-  protected override initProperties(): void {
-    super.initProperties();
-    this.changeDisabled(this._disabledAttr.get(this));
-    this.changeMultiple(this._multipleAttr.get(this));
-    this.changeRequired(this._requiredAttr.get(this));
-  }
-
-  protected override holdSlots(): void {
-    super.holdSlots();
-    const options = this.assignedOptions();
-    this.changeOptions(options);
-  }
-
-  protected override releaseSlots(): void {
-    super.releaseSlots();
-    this.changeOptions([]);
-  }
-
-  protected override holdListeners(): void {
-    super.holdListeners();
+  override connectedCallback(): void {
+    super.connectedCallback();
     this.addEventListener('focusin', this.handleFocusIn);
     this.addEventListener('focusout', this.handleFocusOut);
     this.addEventListener('keydown', this.handleKeydown);
   }
 
-  protected override releaseListeners(): void {
-    super.releaseListeners();
+  override disconnectedCallback(): void {
+    super.disconnectedCallback();
+    this._options.value = [];
     this.removeEventListener('focusin', this.handleFocusIn);
     this.removeEventListener('focusout', this.handleFocusOut);
     this.removeEventListener('keydown', this.handleKeydown);
   }
 
-  protected override attributeChangedCallback(
-    name: string,
-    oldValue: string | null,
-    newValue: string | null,
-  ): void {
-    super.attributeChangedCallback(name, oldValue, newValue);
-    if (name === this._disabledAttr.name) {
-      const disabled = this._disabledAttr.from(newValue);
-      if (!this.changeDisabled(disabled)) return;
-    }
-    if (name === this._multipleAttr.name) {
-      const multiple = this._multipleAttr.from(newValue);
-      if (!this.changeMultiple(multiple)) return;
-    }
-    if (name === this._requiredAttr.name) {
-      const required = this._requiredAttr.from(newValue);
-      if (!this.changeRequired(required)) return;
-    }
+  override assignSlots(): void {
+    super.assignSlots();
+    const options = this.assignedOptions();
+    this._options.value = options;
   }
 
-  protected changeOptions(newValue: ReadonlyArray<HTMLDisclosure>): boolean {
-    const oldValue = this._options;
-    if (isEqual(oldValue, newValue)) return false;
+  override propertyChanged(
+    name: string | symbol,
+    oldValue: unknown,
+    newValue: unknown,
+  ): void {
+    if (name === this._disabled.name) {
+      const curr = newValue as boolean;
+      return this.disabledChanged(curr);
+    }
+    if (name === this._multiple.name) {
+      const curr = newValue as boolean;
+      return this.multipleChanged(curr);
+    }
+    if (name === this._options.name) {
+      const curr = newValue as ReadonlyArray<HTMLDisclosure>;
+      const prev = oldValue as ReadonlyArray<HTMLDisclosure>;
+      return this.optionsChanged(curr, prev);
+    }
+    super.propertyChanged(name, oldValue, newValue);
+  }
 
-    this._options = newValue;
+  protected disabledChanged(newValue: boolean): void {
+    this.inert = newValue;
+    this.ariaDisabled = newValue ? 'true' : 'false';
+    this._internals.ariaDisabled = newValue ? 'true' : 'false';
+  }
 
+  protected multipleChanged(newValue: boolean): void {
+    this.ariaMultiSelectable = newValue ? 'true' : 'false';
+    this._internals.ariaMultiSelectable = newValue ? 'true' : 'false';
+  }
+
+  protected optionsChanged(
+    newValue: ReadonlyArray<HTMLDisclosure>,
+    oldValue: ReadonlyArray<HTMLDisclosure>,
+  ): void {
     for (const opt of oldValue) {
       this.unsubscribe(opt, 'beforetoggle', this.handleOptionBeforeToggle);
       this.unsubscribe(opt, 'toggle', this.handleOptionToggle);
@@ -166,68 +198,6 @@ export class IpeAccordionElement
       this.subscribe(opt, 'beforetoggle', this.handleOptionBeforeToggle);
       this.subscribe(opt, 'toggle', this.handleOptionToggle);
     }
-    return true;
-  }
-
-  protected changeDisabled(newValue: boolean): boolean {
-    const oldValue = this._disabled;
-    if (newValue === oldValue) return false;
-    this._disabled = newValue;
-    this._disabledAttr.set(this, newValue);
-    this.inert = newValue;
-    this.ariaDisabled = newValue ? 'true' : 'false';
-    this._internals.ariaDisabled = newValue ? 'true' : 'false';
-    return true;
-  }
-
-  protected changeMultiple(newValue: boolean): boolean {
-    const oldValue = this._multiple;
-    if (newValue === oldValue) return false;
-    this._multiple = newValue;
-    this._multipleAttr.set(this, newValue);
-    this.ariaMultiSelectable = newValue ? 'true' : 'false';
-    this._internals.ariaMultiSelectable = newValue ? 'true' : 'false';
-    return true;
-  }
-
-  protected changeRequired(newValue: boolean): boolean {
-    const oldValue = this._required;
-    if (newValue === oldValue) return false;
-    this._required = newValue;
-    this._requiredAttr.set(this, newValue);
-    return true;
-  }
-
-  protected getSelected(): Array<HTMLDisclosure> {
-    return this._options.filter((o) => !o.disabled && o.selected);
-  }
-
-  protected getFirst(): HTMLDisclosure | null {
-    return this._options.find((o) => !o.disabled) ?? null;
-  }
-
-  protected getLast(): HTMLDisclosure | null {
-    return this._options.findLast((o) => !o.disabled) ?? null;
-  }
-
-  protected nextOf(option: HTMLDisclosure): HTMLDisclosure {
-    const index = this._options.indexOf(option);
-    for (let i = index + 1; i < this._options.length; i++) {
-      const next = this._options[i];
-      // @ts-expect-error array boundaries checked
-      if (!next.disabled) return next;
-    }
-    return option;
-  }
-
-  protected previousOf(option: HTMLDisclosure): HTMLDisclosure {
-    const index = this._options.indexOf(option);
-    for (let i = index - 1; i >= 0; i--) {
-      const option = this._options[i];
-      // @ts-expect-error array boundaries checked
-      if (!option.disabled) return option;
-    }
-    return option;
   }
 
   protected assignedOptions(): Array<HTMLDisclosure> {
@@ -240,7 +210,7 @@ export class IpeAccordionElement
     for (const localName of localNames) {
       window.customElements
         .whenDefined(localName)
-        .then(() => this.holdSlots())
+        .then(() => this.assignSlots())
         .catch(console.error);
     }
     const options = elements.filter(isHTMLDisclosure);
@@ -249,7 +219,7 @@ export class IpeAccordionElement
 
   protected handleFocusIn(event: FocusEvent): void {
     if (event.target == null) return;
-    for (const option of this._options) {
+    for (const option of this._options.value) {
       if (option === event.target) {
         if (option.id === '') {
           this.removeAttribute('aria-activedescendant');
@@ -272,7 +242,9 @@ export class IpeAccordionElement
     const target = event.target;
     if (target == null || !(target instanceof Element)) return;
 
-    const option = this._options.find((o) => o.summaries.includes(target));
+    const option = this._options.value.find((option) =>
+      option.summaries.includes(target),
+    );
     if (option == null) return;
 
     // Prevent scroll when focusing on accordion item
@@ -282,16 +254,16 @@ export class IpeAccordionElement
 
     switch (event.key) {
       case 'ArrowDown':
-        next = this.nextOf(option);
+        next = nextOptionOf(this._options.value, option);
         break;
       case 'ArrowUp':
-        next = this.previousOf(option);
+        next = previousOptionOf(this._options.value, option);
         break;
       case 'Home':
-        next = this.getFirst();
+        next = getFirstOption(this._options.value);
         break;
       case 'End':
-        next = this.getLast();
+        next = getLastOption(this._options.value);
         break;
     }
 
@@ -308,15 +280,17 @@ export class IpeAccordionElement
 
   protected handleOptionBeforeToggle(event: ToggleEvent): void {
     if (event.newState !== 'closed') return;
-    if (!this._required) return;
-    if (this.selectedOptions.length > 1) return;
+    if (!this._required.value) return;
+    const selected = getSelectedOptions(this._options.value);
+    if (selected.length > 1) return;
     event.preventDefault();
   }
 
   protected handleOptionToggle(event: ToggleEvent): void {
     if (event.newState !== 'open') return;
-    if (this._multiple) return;
-    for (const item of this.selectedOptions) {
+    if (this._multiple.value) return;
+    const selected = getSelectedOptions(this._options.value);
+    for (const item of selected) {
       if (item === event.target) continue;
       item.open = false;
     }

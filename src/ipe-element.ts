@@ -2,11 +2,15 @@
 /// <reference lib="DOM" />
 /// <reference lib="DOM.Iterable" />
 
+import type { Host, AttributeProp } from './property';
+
 /**
  * Represents a base component that all other Ipe elements can extend.
  */
-export abstract class IpeElement extends HTMLElement {
+export abstract class IpeElement extends HTMLElement implements Host {
   #boundListeners = new WeakMap<EventListener, EventListener>();
+
+  #propertyByName = new Map<string, AttributeProp<unknown>>();
 
   constructor() {
     super();
@@ -15,6 +19,36 @@ export abstract class IpeElement extends HTMLElement {
       const shadowRoot = this.attachShadow({ mode: 'open' });
       shadowRoot.innerHTML = template;
     }
+  }
+
+  addProperty(property: AttributeProp<unknown>): void {
+    this.#propertyByName.set(property.name, property);
+  }
+
+  removeProperty(property: AttributeProp<unknown>): void {
+    this.#propertyByName.delete(property.name);
+  }
+
+  shouldPropertyChange(
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    _name: string | symbol,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    _oldValue: unknown,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    _newValue: unknown,
+  ): boolean {
+    return true;
+  }
+
+  propertyChanged(
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    _name: string | symbol,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    _oldValue: unknown,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    _newValue: unknown,
+  ): void {
+    return;
   }
 
   /**
@@ -136,73 +170,70 @@ export abstract class IpeElement extends HTMLElement {
     target.removeEventListener(type, bound, options);
   }
 
-  /**
-   * This callback is called during `connectedCallback`. It should be extended
-   * to init the properties of the `IpeElement` using attributes.
-   */
-  protected initProperties(): void {
-    return;
-  }
+  // /**
+  //  * This callback is called during `connectedCallback`. It should be extended
+  //  * to init the properties of the `IpeElement` using attributes.
+  //  */
+  // protected initProperties(): void {
+  //   return;
+  // }
 
-  /**
-   * This callback is called during `connectedCallback` or during
-   * `descendantUpgradedCallback`. It should be extended to hold references for
-   * slots of the shadow root and subscribe to events on them.
-   */
-  protected holdSlots(): void {
-    return;
-  }
+  // /**
+  //  * This callback is called during `disconnectedCallback`. It should be
+  //  * extended to release references for slots of the shadow root and unsubscribe
+  //  * to events on them.
+  //  */
+  // protected releaseSlots(): void {
+  //   return;
+  // }
 
-  /**
-   * This callback is called during `disconnectedCallback`. It should be
-   * extended to release references for slots of the shadow root and unsubscribe
-   * to events on them.
-   */
-  protected releaseSlots(): void {
-    return;
-  }
+  // /**
+  //  * This callback is called during `connectedCallback`. It should be extended
+  //  * to subscribe listeners to events on the `IpeElement`.
+  //  */
+  // protected holdListeners(): void {
+  //   if (this.shadowRoot != null) {
+  //     this.subscribe(this.shadowRoot, 'slotchange', this.handleSlotchange);
+  //   }
+  // }
 
-  /**
-   * This callback is called during `connectedCallback`. It should be extended
-   * to subscribe listeners to events on the `IpeElement`.
-   */
-  protected holdListeners(): void {
-    if (this.shadowRoot != null) {
-      this.subscribe(this.shadowRoot, 'slotchange', this.handleSlotchange);
-    }
-  }
-
-  /**
-   * This callback is called during `disconnectedCallback`.It should be extended
-   * to unsubscribe listeners to events on the `IpeElement`.
-   */
-  protected releaseListeners(): void {
-    if (this.shadowRoot != null) {
-      this.unsubscribe(this.shadowRoot, 'slotchange', this.handleSlotchange);
-    }
-  }
+  // /**
+  //  * This callback is called during `disconnectedCallback`.It should be extended
+  //  * to unsubscribe listeners to events on the `IpeElement`.
+  //  */
+  // protected releaseListeners(): void {
+  //   if (this.shadowRoot != null) {
+  //     this.unsubscribe(this.shadowRoot, 'slotchange', this.handleSlotchange);
+  //   }
+  // }
 
   /**
    * Called when the element is connected to the DOM tree.
    */
-  protected connectedCallback(): void {
-    this.initProperties();
-    this.holdListeners();
-    this.holdSlots();
+  connectedCallback(): void {
+    for (const property of this.#propertyByName.values()) {
+      property.attributeInit();
+    }
+    this.assignSlots();
+    if (this.shadowRoot != null) {
+      this.subscribe(this.shadowRoot, 'slotchange', this.assignSlots);
+    }
   }
 
   /**
    * Called when the element is disconnected to the DOM tree.
    */
-  protected disconnectedCallback(): void {
-    this.releaseListeners();
-    this.releaseSlots();
+  disconnectedCallback(): void {
+    if (this.shadowRoot != null) {
+      this.unsubscribe(this.shadowRoot, 'slotchange', this.assignSlots);
+    }
   }
 
   /**
    * Called when the element is adopted on a new DOM tree.
    */
-  protected adoptedCallback(): void {
+  adoptedCallback(): void {
+    this.assignSlots();
     return;
   }
 
@@ -213,22 +244,23 @@ export abstract class IpeElement extends HTMLElement {
    * @param oldValue the previous value of the attribute
    * @param newValue the current value of the attribute
    */
-  protected attributeChangedCallback(
-    // @ts-expect-error signature definition
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  attributeChangedCallback(
     name: string,
-    // @ts-expect-error signature definition
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     oldValue: string | null,
-    // @ts-expect-error signature definition
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     newValue: string | null,
   ): void {
-    return;
+    const property = this.#propertyByName.get(name);
+    if (property == null) return;
+    property.attributeChanged(oldValue, newValue);
   }
 
-  protected handleSlotchange(): void {
-    this.holdSlots();
+  /**
+   * This callback is called during `connectedCallback`, `adoptedCallback`
+   * or during an `slotchange` event. It should be extended to hold references
+   * for slots of the shadow root and subscribe to events on them.
+   */
+  assignSlots(): void {
+    return;
   }
 
   static supportsDeclarativeShadowDOM(): boolean {

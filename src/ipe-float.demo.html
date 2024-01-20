@@ -6,24 +6,28 @@
     <title>IpeFloatElement demo</title>
 
     <link rel="stylesheet" href="https://unpkg.com/missing.css@1.1.1" />
-    <style>
-      ipe-float {
-        max-width: 300px;
-        margin: 0;
-        padding: 0.5em;
-        border: solid 1px var(--graphical-fg);
-        border-radius: 0.25em;
-        overflow: hidden;
-        line-height: 1;
-      }
-    </style>
+    <style></style>
     <script type="module" src="./ipe-float.ts"></script>
   </head>
   <body>
     <main>
       <h1><code>ipe-float</code> demo</h1>
       <button popovertarget="popover" id="button">An anchor</button>
-      <ipe-float id="popover" anchor="button" placement="left">
+      <ipe-float id="popover" anchor="button" placement="bottom-end">
+        <template shadowrootmode="open">
+          <style>
+            :host {
+              display: none;
+              margin: 0;
+              max-width: 256px;
+              overflow: hidden;
+            }
+            :host(:popover-open) {
+              display: unset;
+            }
+          </style>
+          <slot></slot>
+        </template>
         Lorem, ipsum dolor sit amet consectetur adipisicing elit. Explicabo
         facere deserunt, possimus, quae labore delectus blanditiis quas,
         exercitationem illo perspiciatis fugit similique porro incidunt quo

@@ -3,26 +3,24 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>IpeDisclosure demo</title>
-
+    <title>IpeCheckbox demo</title>
     <link rel="stylesheet" href="https://unpkg.com/missing.css@1.1.1" />
     <style>
       ipe-checkbox {
-        display: inline-block;
-        height: 1.125em;
-        width: 1.125em;
         background-color: var(--interactive-bg);
-        border: solid 2px var(--graphical-fg);
-        border-radius: 0.125em;
-        overflow: hidden;
-        vertical-align: middle;
-        line-height: 1;
+        border-color: var(--graphical-fg);
       }
-      ipe-checkbox[aria-checked='true'] {
+      ipe-checkbox[checked='true'] {
         background-color: var(--accent);
+        box-shadow:
+          inset 0.25em 0.25em 0 var(--interactive-bg),
+          inset -0.25em -0.25em 0 var(--interactive-bg);
       }
-      ipe-checkbox[aria-checked='mixed'] {
+      ipe-checkbox[checked='mixed'] {
         background-color: var(--muted-accent);
+        box-shadow:
+          inset 0.25em 0.25em 0 var(--interactive-bg),
+          inset -0.25em -0.25em 0 var(--interactive-bg);
       }
       ipe-checkbox[aria-invalid='true'] {
         background-color: var(--bad-bg);
@@ -33,11 +31,44 @@
   </head>
   <body>
     <main>
-      <h1><code>ipe-disclosure</code> demo</h1>
+      <h1><code>ipe-checkbox</code> demo</h1>
       <form class="table rows">
         <p>
           <label for="agree">
-            <ipe-checkbox name="agree" value="yes" required></ipe-checkbox>
+            <ipe-checkbox name="agree" value="yes" required>
+              <template shadowrootmode="open">
+                <style>
+                  :host {
+                    display: inline-block;
+                    height: 1.125em;
+                    width: 1.125em;
+                    background-color: white;
+                    border: solid 0.125em dimgray;
+                    border-radius: 0.125em;
+                    overflow: hidden;
+                    vertical-align: middle;
+                    line-height: 1;
+                    cursor: pointer;
+                  }
+                  :host([checked='true']) {
+                    background-color: black;
+                    box-shadow:
+                      inset 0.25em 0.25em 0 white,
+                      inset -0.25em -0.25em 0 white;
+                  }
+                  :host([checked='mixed']) {
+                    background-color: gray;
+                    box-shadow:
+                      inset 0.25em 0.25em 0 white,
+                      inset -0.25em -0.25em 0 white;
+                  }
+                  :host([aria-invalid='true']) {
+                    border-color: red;
+                  }
+                </style>
+                <slot></slot>
+              </template>
+            </ipe-checkbox>
             Do you agree?
           </label>
         </p>
