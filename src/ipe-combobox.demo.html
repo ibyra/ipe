@@ -116,12 +116,18 @@
                 popover="auto"
               ></slot>
             </template>
-            <ipe-option slot="picked" value="single">Single user</ipe-option>
-            <ipe-option slot="picked" value="multiple">Multi-users</ipe-option>
-            <ipe-option slot="popover" value="single">One user</ipe-option>
-            <ipe-option slot="popover" value="multiple"
-              >Multiple users</ipe-option
-            >
+            <ipe-option slot="picked" value="single" selected>
+              Single user
+            </ipe-option>
+            <ipe-option slot="picked" value="multiple">
+              Multi-users
+            </ipe-option>
+            <ipe-option slot="popover" value="single" selected>
+              One user
+            </ipe-option>
+            <ipe-option slot="popover" value="multiple">
+              Multiple users
+            </ipe-option>
           </ipe-combobox>
         </p>
         <p>
@@ -225,6 +231,7 @@
         </p>
         <p>
           <button type="submit">Submit</button>
+          <button type="reset">Reset</button>
         </p>
       </form>
     </main>

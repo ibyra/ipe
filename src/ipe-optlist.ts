@@ -91,8 +91,7 @@ export class IpeOptlistElement
   }
 
   get value(): string {
-    const selected = getSelectedOptions(this._options.value);
-    const values = unique(getOptionsValues(selected));
+    const values = this.getOptionsValues();
     return values[0] ?? '';
   }
   set value(value: string) {
@@ -102,8 +101,7 @@ export class IpeOptlistElement
   }
 
   get values(): Array<string> {
-    const selected = getSelectedOptions(this._options.value);
-    const values = unique(getOptionsValues(selected));
+    const values = this.getOptionsValues();
     return values;
   }
   set values(value: Array<string>) {
@@ -149,8 +147,7 @@ export class IpeOptlistElement
   override get formValidity(): FormValidity {
     const { flags, messages } = super.formValidity;
 
-    const selected = getSelectedOptions(this._options.value);
-    const values = unique(getOptionsValues(selected));
+    const values = this.getOptionsValues();
 
     messages.valueMissing = this.dataset['valueMissing'] ?? 'Required';
     flags.valueMissing = this._required.value && values.length === 0;
@@ -168,8 +165,7 @@ export class IpeOptlistElement
   }
 
   override get formValue(): FormData | null {
-    const selected = getSelectedOptions(this._options.value);
-    const values = unique(getOptionsValues(selected));
+    const values = this.getOptionsValues();
     if (values.length === 0) return null;
     const name = this.name;
     const formdata = new FormData();
@@ -230,6 +226,12 @@ export class IpeOptlistElement
     return previousOptionOf(this._options.value, activeElement);
   }
 
+  override saveForm(): void {
+    const values = this.getOptionsValues();
+    this.formState.set('values', values);
+    super.saveForm();
+  }
+
   override connectedCallback(): void {
     super.connectedCallback();
     this.addEventListener('blur', this.handleBlur);
@@ -241,6 +243,13 @@ export class IpeOptlistElement
     this._options.value = [];
     this.removeEventListener('blur', this.handleBlur);
     this.removeEventListener('keydown', this.handleKeydown);
+  }
+
+  override formResetCallback(): void {
+    super.formResetCallback();
+    for (const option of this._options.value) {
+      option.selected = option.defaultSelected;
+    }
   }
 
   override assignSlots(): void {
@@ -323,6 +332,12 @@ export class IpeOptlistElement
   protected multipleChanged(newValue: boolean): void {
     this.ariaMultiSelectable = newValue ? 'true' : 'false';
     this._internals.ariaMultiSelectable = newValue ? 'true' : 'false';
+  }
+
+  protected getOptionsValues(): Array<string> {
+    const selected = getSelectedOptions(this._options.value);
+    const values = unique(getOptionsValues(selected));
+    return values;
   }
 
   protected canSelect(): boolean {

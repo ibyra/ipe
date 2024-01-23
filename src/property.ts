@@ -268,12 +268,11 @@ export class Property<H extends Host, T = unknown> implements AttributeProp<T> {
 
   init(value: T) {
     const newValue = this._cast(value);
+    this._initialValue = newValue;
     const oldValue = this._currentValue;
     if (this._equals(oldValue, newValue)) return;
 
     this._currentValue = newValue;
-    this._initialValue = newValue;
-
     this.onValueSet();
     this.host.propertyChanged(this.name, oldValue, newValue);
   }
