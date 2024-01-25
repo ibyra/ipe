@@ -31,7 +31,6 @@ export class IpeOptionElement extends IpeElement implements HTMLValueOption {
       padding: 0.25em;
       border: solid 2px black;
       border-radius: 0.125em;
-      overflow: hidden;
       vertical-align: middle;
       line-height: 1;
       cursor: pointer;
