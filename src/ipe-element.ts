@@ -2,79 +2,98 @@
 /// <reference lib="DOM" />
 /// <reference lib="DOM.Iterable" />
 
-import type { Host, AttributeProp } from './property';
+import { ReactiveElement } from 'lit';
 
 /**
  * Represents a base component that all other Ipe elements can extend.
  */
-export abstract class IpeElement extends HTMLElement implements Host {
-  #boundListeners = new WeakMap<EventListener, EventListener>();
+export abstract class IpeElement extends ReactiveElement {
+  static content: string | null = null;
 
-  #propertyByName = new Map<string, AttributeProp<unknown>>();
+  #boundListeners: WeakMap<EventListener, EventListener>;
 
   constructor() {
     super();
-    const template = this.template;
-    if (this.shadowRoot == null && template != null) {
-      const shadowRoot = this.attachShadow({ mode: 'open' });
-      shadowRoot.innerHTML = template;
+    this.#boundListeners = new WeakMap();
+  }
+
+  protected override createRenderRoot(): HTMLElement | DocumentFragment {
+    const renderRoot = super.createRenderRoot();
+    if (renderRoot.children.length !== 0) return renderRoot;
+
+    const template = this.querySelector('template[shadowrootmode="open"]');
+    if (template != null && template instanceof HTMLTemplateElement) {
+      template.remove();
     }
-  }
 
-  addProperty(property: AttributeProp<unknown>): void {
-    this.#propertyByName.set(property.name, property);
-  }
+    const content = (this.constructor as typeof IpeElement).content;
+    if (content == null) return renderRoot;
 
-  removeProperty(property: AttributeProp<unknown>): void {
-    this.#propertyByName.delete(property.name);
-  }
-
-  shouldPropertyChange(
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    _name: string | symbol,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    _oldValue: unknown,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    _newValue: unknown,
-  ): boolean {
-    return true;
-  }
-
-  propertyChanged(
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    _name: string | symbol,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    _oldValue: unknown,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    _newValue: unknown,
-  ): void {
-    return;
+    const element = this.ownerDocument.createElement('template');
+    element.innerHTML = content;
+    renderRoot.replaceChildren(element.content);
+    element.remove();
+    return renderRoot;
   }
 
   /**
-   * Returns the template for the shadow root this element. Can be set to `null`
-   * to indicate that the element has no shadow root.
-   */
-  protected get template(): string | null {
-    return null;
-  }
-
-  /**
-   * Returns the the shadow root slot with the given name; or the default slot
-   * if the name is undefined.
+   * Returns the slot on the shadow root with the given name, or the default
+   * slot if no name is given. Returns null if no slot is found.
    *
-   * @param name the name of the slot
+   * @param name - the name of the slot
    */
-  protected getShadowRootSlot(name?: string): HTMLSlotElement | null {
-    if (this.shadowRoot == null) return null;
-    const selector = name == null ? 'slot:not([name])' : `slot[name="${name}"]`;
-    return this.shadowRoot.querySelector<HTMLSlotElement>(selector);
+  getSlot(name?: string): HTMLSlotElement | null {
+    const attr = name != null ? `[name="${name}"]` : ':not([name])';
+    const slot = this.renderRoot.querySelector<HTMLSlotElement>(`slot${attr}`);
+    return slot;
   }
 
   /**
-   * Subscribe a listener to a type of event in a event target bound to this
-   * element. This will create an map of the original function to the bound
-   * function to handle unsubscribing.
+   * Returns the assigned elements from a slot on the shadow root with the given
+   * name, or the default slot if no name is given.
+   *
+   * @param name - the name of the slot
+   */
+  protected getAssignedElements(name?: string): Array<Element> {
+    if (!this.isConnected) return [];
+
+    const slot = this.getSlot(name);
+    if (slot == null) return [];
+
+    const elements = slot.assignedElements();
+    return elements;
+  }
+
+  /**
+   * Returns the assigned elements from a slot on the shadow root with the given
+   * name, or the default slot if no name is given. This method guarantees that
+   * all elements returned are defined and upgraded.
+   *
+   * @param name - the name of the slot
+   */
+  protected async getDefinedAssignedElements(
+    name?: string,
+  ): Promise<Array<Element>> {
+    const elements = this.getAssignedElements(name);
+    const notDefined = elements.filter((e) => e.matches(':not(:defined)'));
+
+    if (notDefined.length === 0) return elements;
+
+    const definitionPromises = Array.from(
+      new Set(notDefined.map((element) => element.localName)),
+      (name) => window.customElements.whenDefined(name),
+    );
+
+    await Promise.all(definitionPromises);
+
+    notDefined.map((element) => window.customElements.upgrade(element));
+
+    return elements;
+  }
+
+  /**
+   * Subscribe a listener to a type of event in a event target that is always
+   * bound to this element.
    *
    * @param target the event target
    * @param type the name of the event
@@ -108,7 +127,7 @@ export abstract class IpeElement extends HTMLElement implements Host {
   protected subscribe<K extends keyof AnimationEventMap>(
     target: Animation,
     type: K,
-    listener: (this: Animation, ev: AnimationEventMap[K]) => void,
+    listener: (this: this, ev: AnimationEventMap[K]) => void,
     options?: boolean | AddEventListenerOptions,
   ): void;
 
@@ -168,114 +187,5 @@ export abstract class IpeElement extends HTMLElement implements Host {
   ): void {
     const bound = this.#boundListeners.get(callback) ?? callback;
     target.removeEventListener(type, bound, options);
-  }
-
-  // /**
-  //  * This callback is called during `connectedCallback`. It should be extended
-  //  * to init the properties of the `IpeElement` using attributes.
-  //  */
-  // protected initProperties(): void {
-  //   return;
-  // }
-
-  // /**
-  //  * This callback is called during `disconnectedCallback`. It should be
-  //  * extended to release references for slots of the shadow root and unsubscribe
-  //  * to events on them.
-  //  */
-  // protected releaseSlots(): void {
-  //   return;
-  // }
-
-  // /**
-  //  * This callback is called during `connectedCallback`. It should be extended
-  //  * to subscribe listeners to events on the `IpeElement`.
-  //  */
-  // protected holdListeners(): void {
-  //   if (this.shadowRoot != null) {
-  //     this.subscribe(this.shadowRoot, 'slotchange', this.handleSlotchange);
-  //   }
-  // }
-
-  // /**
-  //  * This callback is called during `disconnectedCallback`.It should be extended
-  //  * to unsubscribe listeners to events on the `IpeElement`.
-  //  */
-  // protected releaseListeners(): void {
-  //   if (this.shadowRoot != null) {
-  //     this.unsubscribe(this.shadowRoot, 'slotchange', this.handleSlotchange);
-  //   }
-  // }
-
-  /**
-   * Called when the element is connected to the DOM tree.
-   */
-  connectedCallback(): void {
-    for (const property of this.#propertyByName.values()) {
-      property.attributeInit();
-    }
-    this.assignSlots();
-    if (this.shadowRoot != null) {
-      this.subscribe(this.shadowRoot, 'slotchange', this.assignSlots);
-    }
-  }
-
-  /**
-   * Called when the element is disconnected to the DOM tree.
-   */
-  disconnectedCallback(): void {
-    if (this.shadowRoot != null) {
-      this.unsubscribe(this.shadowRoot, 'slotchange', this.assignSlots);
-    }
-  }
-
-  /**
-   * Called when the element is adopted on a new DOM tree.
-   */
-  adoptedCallback(): void {
-    this.assignSlots();
-    return;
-  }
-
-  /**
-   * Called when an observed attribute change its value.
-   *
-   * @param name the name of the attribute
-   * @param oldValue the previous value of the attribute
-   * @param newValue the current value of the attribute
-   */
-  attributeChangedCallback(
-    name: string,
-    oldValue: string | null,
-    newValue: string | null,
-  ): void {
-    const property = this.#propertyByName.get(name);
-    if (property == null) return;
-    property.attributeChanged(oldValue, newValue);
-  }
-
-  /**
-   * This callback is called during `connectedCallback`, `adoptedCallback`
-   * or during an `slotchange` event. It should be extended to hold references
-   * for slots of the shadow root and subscribe to events on them.
-   */
-  assignSlots(): void {
-    return;
-  }
-
-  static supportsDeclarativeShadowDOM(): boolean {
-    return Object.prototype.hasOwnProperty.call(
-      HTMLTemplateElement.prototype,
-      'shadowRootMode',
-    );
-  }
-
-  /**
-   * The names of all observed attributes. The `attributeChangedCallback`
-   * callback when whenever an attribute whose name returned here is added,
-   * modified, removed, or replaced.
-   */
-  static get observedAttributes(): Array<string> {
-    return [];
   }
 }

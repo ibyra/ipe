@@ -1,78 +1,113 @@
-import { type HTMLValueOption } from './dom';
+import { css, type PropertyDeclarations, type PropertyValues } from 'lit';
+import {
+  type HTMLValueOption,
+  BoolAttributeConverter,
+  StringAttributeConverter,
+} from './commons';
 import { IpeElement } from './ipe-element';
-import { Property, attributeParsers } from './property';
 
 export class IpeOptionElement extends IpeElement implements HTMLValueOption {
-  protected _value = new Property(this, {
-    name: 'value',
-    value: '',
-    cast: String,
-    attribute: attributeParsers.str,
-  });
+  static override properties: PropertyDeclarations = {
+    value: {
+      reflect: true,
+      attribute: 'value',
+      converter: new StringAttributeConverter(),
+    },
+    disabled: {
+      reflect: true,
+      attribute: 'disabled',
+      converter: new BoolAttributeConverter(),
+    },
+    selected: {
+      reflect: true,
+      attribute: 'selected',
+      converter: new BoolAttributeConverter(),
+    },
+  };
 
-  protected _disabled = new Property(this, {
-    name: 'disabled',
-    value: false,
-    cast: Boolean,
-    attribute: attributeParsers.bool,
-  });
+  static override styles = css`
+    :host {
+      display: inline-block;
+      padding: 0.25em;
+      border: solid 2px black;
+      border-radius: 0.125em;
+      overflow: hidden;
+      vertical-align: middle;
+      line-height: 1;
+      cursor: pointer;
+    }
+    :host([selected]) {
+      border-color: gray;
+    }
+  `;
 
-  protected _selected = new Property(this, {
-    name: 'selected',
-    value: false,
-    cast: Boolean,
-    attribute: attributeParsers.bool,
-  });
+  static override content = `
+    <slot></slot>
+  `;
 
-  protected _userInteracted: boolean = false;
+  public declare value: string;
+  public declare disabled: boolean;
+  public declare selected: boolean;
 
-  protected _changeTimerID: number | null = null;
+  protected declare _defaultValue: string;
+  protected declare _defaultDisabled: boolean;
+  protected declare _defaultSelected: boolean;
+  protected declare _userInteracted: boolean;
+  protected declare _internals: ElementInternals;
 
-  protected _internals: ElementInternals = this.attachInternals();
-
-  get value(): string {
-    return this._value.value;
-  }
-  set value(value: string) {
-    this._value.value = value;
-  }
-
-  get disabled(): boolean {
-    return this._disabled.value;
-  }
-  set disabled(value: boolean) {
-    this._disabled.value = value;
-  }
-
-  get selected(): boolean {
-    return this._selected.value;
-  }
-  set selected(value: boolean) {
-    this._selected.value = value;
+  constructor() {
+    super();
+    this.value = '';
+    this.disabled = false;
+    this.selected = false;
+    this._defaultValue = '';
+    this._defaultDisabled = false;
+    this._defaultSelected = false;
+    this._userInteracted = false;
+    this._internals = this.attachInternals();
   }
 
   get defaultValue(): string {
-    return this._value.initialValue;
+    return this._defaultValue;
+  }
+
+  get defaultDisabled(): boolean {
+    return this._defaultDisabled;
   }
 
   get defaultSelected(): boolean {
-    return this._selected.initialValue;
+    return this._defaultSelected;
   }
 
   toggle(): void {
-    this._selected.value = !this._selected.value;
+    this.selected = !this.selected;
   }
 
   select(): void {
-    this._selected.value = true;
+    this.selected = true;
   }
 
   deselect(): void {
-    this._selected.value = false;
+    this.selected = false;
+  }
+
+  reset(): void {
+    this.value = this._defaultValue;
+    this.disabled = this._defaultDisabled;
+    this.selected = this._defaultSelected;
   }
 
   override connectedCallback(): void {
     super.connectedCallback();
+
+    this._defaultValue = this.value;
+    this._defaultDisabled = this.disabled;
+    this._defaultSelected = this.selected;
+
+    if (!this.hasAttribute('role')) {
+      this.role = 'option';
+    }
+
     this.addEventListener('click', this.handleClick);
     this.addEventListener('keydown', this.handleKeydown);
   }
@@ -83,69 +118,56 @@ export class IpeOptionElement extends IpeElement implements HTMLValueOption {
     this.removeEventListener('keydown', this.handleKeydown);
   }
 
-  override shouldPropertyChange(
-    name: string | symbol,
-    oldValue: unknown,
-    newValue: unknown,
-  ): boolean {
-    if (name === 'selected') {
-      const curr = newValue as boolean;
-      const prev = oldValue as boolean;
-      return this.shouldSelectedChange(curr, prev);
-    }
-    return super.shouldPropertyChange(name, oldValue, newValue);
+  protected override updated(props: PropertyValues<this>): void {
+    if (props.has('value')) this.valueUpdated();
+    if (props.has('disabled')) this.disabledUpdated();
+    if (props.has('selected')) this.selectedUpdated();
+    return super.updated(props);
   }
 
-  override propertyChanged(
-    name: string | symbol,
-    oldValue: unknown,
-    newValue: unknown,
-  ): void {
-    if (name === 'disabled') {
-      const curr = newValue as boolean;
-      return this.disabledChanged(curr);
-    }
-    if (name === 'selected') {
-      const curr = newValue as boolean;
-      const prev = oldValue as boolean;
-      return this.selectedChanged(curr, prev);
-    }
-    super.propertyChanged(name, oldValue, newValue);
+  protected valueUpdated(): void {
+    const event = new Event('change', { bubbles: true });
+    this.dispatchEvent(event);
   }
 
-  protected shouldSelectedChange(
-    newValue: boolean,
-    oldValue: boolean,
-  ): boolean {
-    const event = new ToggleEvent('beforetoggle', {
+  protected disabledUpdated(): void {
+    const disabled = this.disabled ? 'true' : 'false';
+    this.inert = this.disabled;
+    this.ariaDisabled = disabled;
+    this._internals.ariaDisabled = disabled ? 'true' : 'false';
+  }
+
+  protected selectedUpdated(): void {
+    const selected = this.selected ? 'true' : 'false';
+    this.ariaSelected = selected;
+    this._internals.ariaSelected = selected;
+  }
+
+  protected toggleSelected(): void {
+    const oldValue = this.selected;
+    const newValue = !this.selected;
+
+    const beforeToggle = new ToggleEvent('beforetoggle', {
       cancelable: true,
       newState: newValue ? 'selected' : 'unselected',
       oldState: oldValue ? 'selected' : 'unselected',
     });
-    const proceed = this.dispatchEvent(event);
-    return proceed;
-  }
+    const proceed = this.dispatchEvent(beforeToggle);
+    if (!proceed) return;
 
-  protected disabledChanged(newValue: boolean): void {
-    this.inert = newValue;
-    this.ariaDisabled = newValue ? 'true' : 'false';
-    this._internals.ariaDisabled = newValue ? 'true' : 'false';
-  }
+    this.selected = newValue;
 
-  protected selectedChanged(newValue: boolean, oldValue: boolean): void {
-    this.ariaSelected = newValue ? 'true' : 'false';
-    this._internals.ariaSelected = newValue ? 'true' : 'false';
-    const event = new ToggleEvent('toggle', {
+    const afterToggle = new ToggleEvent('toggle', {
       cancelable: false,
       newState: newValue ? 'selected' : 'unselected',
       oldState: oldValue ? 'selected' : 'unselected',
     });
-    this.dispatchEvent(event);
+    this.dispatchEvent(afterToggle);
   }
 
   protected handleClick(): void {
     this._userInteracted = true;
-    this._selected.value = !this._selected.value;
+    this.toggleSelected();
   }
 
   protected handleKeydown(event: KeyboardEvent): void {
@@ -153,11 +175,7 @@ export class IpeOptionElement extends IpeElement implements HTMLValueOption {
     // Prevent space scroll
     event.preventDefault();
     this._userInteracted = true;
-    this._selected.value = !this._selected.value;
-  }
-
-  static override get observedAttributes(): Array<string> {
-    return [...super.observedAttributes, 'disabled', 'selected', 'value'];
+    this.toggleSelected();
   }
 }
 

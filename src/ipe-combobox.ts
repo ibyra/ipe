@@ -7,356 +7,408 @@ import {
   offset as offsetMiddleware,
   shift as shiftMiddleware,
 } from '@floating-ui/dom';
+import { css, type PropertyDeclarations, type PropertyValues } from 'lit';
 import { isEqual } from 'moderndash';
+import { IpeOptlistElement } from './ipe-optlist';
 import {
   type HTMLOpenable,
   type HTMLOptlist,
   type HTMLValueOption,
   type Placement,
-} from './dom';
-import { IpeOptlistElement } from './ipe-optlist';
-import {
   asInt,
   asPlacement,
-  getFirstOption,
-  getLastOption,
-  getSelectedOptions,
   isHTMLValueOption,
   nextOptionOf,
   previousOptionOf,
+  BoolAttributeConverter,
+  IntAttributeConverter,
+  PlacementAttributeConverter,
+  StringAttributeConverter,
 } from './commons';
-import { FormProperty, Property, attributeParsers } from './property';
 
 // TODO: Add support to option group element
-
-// TODO: remove "--ipe-combobox-index" CSS variable when the CSS `attr()`
-//       function supports integer values.
-//       https://developer.mozilla.org/en-US/docs/Web/CSS/attr
 
 export class IpeComboboxElement
   extends IpeOptlistElement
   implements HTMLOptlist<HTMLValueOption>, HTMLOpenable
 {
-  protected _picked = new Property(this, {
-    name: 'picked',
-    value: [] as ReadonlyArray<HTMLValueOption>,
-    equals: isEqual,
-  });
+  static override properties: PropertyDeclarations = {
+    open: {
+      reflect: true,
+      attribute: 'open',
+      converter: new BoolAttributeConverter(),
+    },
+    offset: {
+      reflect: true,
+      attribute: 'offset',
+      converter: new IntAttributeConverter(0),
+    },
+    shift: {
+      reflect: true,
+      attribute: 'shift',
+      converter: new IntAttributeConverter(0),
+    },
+    placement: {
+      reflect: true,
+      attribute: 'placement',
+      converter: new PlacementAttributeConverter(),
+    },
+    placeholder: {
+      reflect: true,
+      attribute: 'placeholder',
+      converter: new StringAttributeConverter(),
+    },
+  };
 
-  protected _open = new Property(this, {
-    name: 'open',
-    value: false,
-    cast: Boolean,
-    attribute: attributeParsers.bool,
-  });
+  static override styles = css`
+    :host {
+      display: block;
+      position: relative;
+      box-sizing: border-box;
+      cursor: pointer;
+    }
 
-  protected _offset = new Property(this, {
-    name: 'offset',
-    value: 0,
-    cast: asInt,
-    attribute: attributeParsers.int,
-  });
+    #input {
+      box-sizing: border-box;
+      display: block;
+      width: 100%;
+      height: 2.5em;
+      border: solid 2px dimgray;
+      background-color: white;
+      cursor: pointer;
+    }
 
-  protected _shift = new Property(this, {
-    name: 'shift',
-    value: 0,
-    cast: asInt,
-    attribute: attributeParsers.int,
-  });
+    #picked {
+      display: flex;
+      flex-direction: row;
+      position: absolute;
+      box-sizing: border-box;
+      gap: 0.5em;
+      top: 50%;
+      left: 0.5em;
+      translate: 0 -50%;
+      pointer-events: none;
+    }
+    #picked::slotted(*) {
+      display: none;
+      border: 0;
+    }
+    #picked::slotted([selected]) {
+      display: unset;
+    }
 
-  protected _placement = new Property(this, {
-    name: 'placement',
-    value: 'auto' as Placement,
-    cast: asPlacement,
-    attribute: attributeParsers.placement,
-  });
+    #popover {
+      display: hidden;
+      box-sizing: border-box;
+      margin: 0;
+      border: solid 2px dimgray;
+      padding: 0;
+      background-color: white;
+    }
+    #popover:popover-open {
+      display: unset;
+    }
+    #popover::slotted(*) {
+      border: 0;
+      cursor: pointer;
+    }
+    #popover::slotted([active]) {
+      background-color: rgba(255, 255, 255, 0.1);
+    }
+    #popover::slotted([selected]) {
+      background-color: rgba(255, 255, 255, 0.2);
+    }
+    #popover::slotted([active][selected]) {
+      background-color: rgba(255, 255, 255, 0.3);
+    }
+  `;
 
-  protected _placeholder = new FormProperty(this, {
-    name: 'placeholder',
-    value: '',
-    cast: String,
-    attribute: attributeParsers.str,
-  });
+  static override content = `
+    <input id="input" part="input" type="button" popovertarget="popover" inert />
+    <slot id="picked" name="picked" part="picked"></slot>
+    <slot></slot>
+    <slot id="popover" name="popover" part="popover" popover="auto"></slot>
+  `;
 
-  protected _popoverElem: HTMLDivElement;
+  public declare open: boolean;
+  public declare offset: number;
+  public declare shift: number;
+  public declare placement: Placement;
+  public declare placeholder: string;
 
-  protected _inputElem: HTMLInputElement;
-
-  protected _updateTimerID: number | null = null;
-
-  protected _updateCleanup: (() => void) | null = null;
+  protected declare _defaultOffset: number;
+  protected declare _defaultShift: number;
+  protected declare _defaultPlacement: Placement;
+  protected declare _defaultPlaceholder: string;
+  protected declare _updateCleanup: (() => void) | null;
+  protected declare _picked: ReadonlyArray<HTMLValueOption>;
 
   constructor() {
     super();
-    this._popoverElem = this.shadowRoot!.querySelector('#popover')!;
-    this._inputElem = this.shadowRoot!.querySelector('#input')!;
-  }
-
-  protected override get template(): string {
-    return `
-      <style>
-        :host {
-          display: block;
-          position: relative;
-          box-sizing: border-box;
-        }
-
-        #input {
-          box-sizing: border-box;
-          display: block;
-          width: 100%;
-          height: 2.5em;
-          border: solid 2px dimgray;
-          background-color: white;
-          cursor: pointer;
-        }
-
-        #picked {
-          display: flex;
-          flex-direction: row;
-          position: absolute;
-          box-sizing: border-box;
-          gap: 0.5em;
-          top: 50%;
-          left: 0.5em;
-          translate: 0 -50%;
-          pointer-events: none;
-        }
-        #picked::slotted(*) {
-          display: none;
-        }
-        #picked::slotted([selected]) {
-          display: unset;
-        }
-
-        #popover {
-          display: hidden;
-          box-sizing: border-box;
-          margin: 0;
-          border: solid 2px dimgray;
-          padding: 0;
-          background-color: white; 
-        }
-        #popover:popover-open {
-          display: unset;
-        }
-        #popover::slotted(*) {
-          padding: 0.25em;
-          cursor: pointer;
-        }
-        #popover::slotted([active]) {
-          background-color: rgba(255, 255, 255, 0.1);
-        }
-        #popover::slotted([selected]) {
-          background-color: rgba(255, 255, 255, 0.2);
-        }
-        #popover::slotted([active][selected]) {
-          background-color: rgba(255, 255, 255, 0.3);
-        }
-      </style>
-      <input id="input" part="input" type="button" popovertarget="popover" />
-      <slot id="picked" name="picked" part="picked"></slot>
-      <slot></slot>
-      <slot id="popover" name="popover" part="popover" popover="auto"></slot>
-    `;
-  }
-
-  get open(): boolean {
-    return this._open.value;
-  }
-  set open(value: boolean) {
-    this._open.value = value;
-    this.updatePosition();
-  }
-
-  get offset(): number {
-    return this._offset.value;
-  }
-  set offset(value: number) {
-    this._offset.value = value;
-    this.updatePosition();
-  }
-
-  get shift(): number {
-    return this._shift.value;
-  }
-  set shift(value: number) {
-    this._shift.value = value;
-    this.updatePosition();
-  }
-
-  get placement(): Placement {
-    return this._placement.value;
-  }
-  set placement(value: Placement) {
-    this._placement.value = value;
-    this.updatePosition();
-  }
-
-  get placeholder(): string {
-    return this._placeholder.value;
-  }
-  set placeholder(value: string) {
-    this._placeholder.value = value;
+    this.open = false;
+    this.offset = 0;
+    this.shift = 0;
+    this.placement = 'auto';
+    this.placeholder = '';
+    this._defaultOffset = 0;
+    this._defaultShift = 0;
+    this._defaultPlacement = 'auto';
+    this._defaultPlaceholder = '';
+    this._updateCleanup = null;
+    this._picked = [];
   }
 
   showPicker(): void {
-    this._popoverElem.showPopover();
+    this.popoverSlot?.showPopover();
   }
 
   hidePicker(): void {
-    this._popoverElem.hidePopover();
+    this.popoverSlot?.hidePopover();
   }
 
   togglePicker(): void {
-    this._popoverElem.togglePopover();
+    this.popoverSlot?.togglePopover();
   }
 
   override connectedCallback() {
     super.connectedCallback();
-    this.addEventListener('click', this.handleClick);
-    this.subscribe(
-      this._popoverElem,
-      'beforetoggle',
-      this.handlePopoverBeforetoggle,
-    );
+
+    this._defaultOffset = this.offset;
+    this._defaultShift = this.shift;
+    this._defaultPlacement = this.placement;
+    this._defaultPlaceholder = this.placeholder;
 
     this._internals.ariaHasPopup = 'true';
     if (!this.hasAttribute('aria-haspopup')) {
       this.ariaHasPopup = 'true';
     }
 
-    this.updatePosition();
+    this.addEventListener('click', this.handleClick);
+    this.updatePicked();
+
+    const inputElement = this.inputElement;
+    if (inputElement != null) {
+      this.subscribe(inputElement, 'click', this.handleInputClick);
+    }
+
+    const popoverSlot = this.popoverSlot;
+    if (popoverSlot != null) {
+      this.subscribe(popoverSlot, 'slotchange', this.handlePopoverSlotChange);
+      this.subscribe(
+        popoverSlot,
+        'beforetoggle',
+        this.handlePopoverBeforetoggle,
+      );
+    }
+
+    const pickedSlot = this.pickedSlot;
+    if (pickedSlot != null) {
+      this.subscribe(pickedSlot, 'slotchange', this.handlePickedSlotChange);
+    }
   }
 
   override disconnectedCallback(): void {
     super.disconnectedCallback();
-    this._picked.value = [];
-
     this.removeEventListener('click', this.handleClick);
-    this.unsubscribe(
-      this._popoverElem,
-      'beforetoggle',
-      this.handlePopoverBeforetoggle,
-    );
+    this.updatePicked();
+
+    const inputElement = this.inputElement;
+    if (inputElement != null) {
+      this.unsubscribe(inputElement, 'click', this.handleInputClick);
+    }
+
+    const popoverSlot = this.popoverSlot;
+    if (popoverSlot != null) {
+      this.unsubscribe(popoverSlot, 'slotchange', this.handlePopoverSlotChange);
+      this.unsubscribe(
+        popoverSlot,
+        'beforetoggle',
+        this.handlePopoverBeforetoggle,
+      );
+    }
+
+    const pickedSlot = this.pickedSlot;
+    if (pickedSlot != null) {
+      this.unsubscribe(pickedSlot, 'slotchange', this.handlePickedSlotChange);
+    }
     this.updatePosition();
   }
 
-  override assignSlots(): void {
-    super.assignSlots();
-    const picked = this.assignedPicked();
-    this._picked.value = picked;
+  protected get inputElement(): HTMLInputElement | null {
+    const element = this.renderRoot.querySelector('input');
+    return element;
   }
 
-  override propertyChanged(
-    name: string | symbol,
-    oldValue: unknown,
-    newValue: unknown,
-  ): void {
-    if (name === this._options.name) {
-      const curr = newValue as ReadonlyArray<HTMLValueOption>;
-      const prev = oldValue as ReadonlyArray<HTMLValueOption>;
-      return this.optionsChanged(curr, prev);
-    }
-    if (name === this._picked.name) {
-      const curr = newValue as ReadonlyArray<HTMLValueOption>;
-      const prev = oldValue as ReadonlyArray<HTMLValueOption>;
-      return this.pickedChanged(curr, prev);
-    }
-    if (name === this._placeholder.name) {
-      const curr = newValue as string;
-      return this.placeholderChanged(curr);
-    }
-    if (name === this._open.name) {
-      const curr = newValue as boolean;
-      return this.openChanged(curr);
-    }
-    if (
-      name === this._offset.name ||
-      name === this._shift.name ||
-      name === this._placement.name
-    ) {
-      return this.updatePosition();
-    }
-    return super.propertyChanged(name, oldValue, newValue);
+  protected get pickedSlot(): HTMLSlotElement | null {
+    const element = this.getSlot('picked');
+    return element;
   }
 
-  protected override optionsChanged(
-    newValue: ReadonlyArray<HTMLValueOption>,
+  protected get popoverSlot(): HTMLSlotElement | null {
+    const element = this.getSlot('popover');
+    return element;
+  }
+
+  protected get _positionProps(): Array<keyof this> {
+    return ['open', 'offset', 'shift', 'placement'];
+  }
+
+  protected override get _formProps(): (keyof this)[] {
+    return [...super._formProps, 'offset', 'shift', 'placement', 'placeholder'];
+  }
+
+  protected override resetForm(): void {
+    super.resetForm();
+    this.offset = this._defaultOffset;
+    this.shift = this._defaultShift;
+    this.placement = this._defaultPlacement;
+    this.placeholder = this._defaultPlaceholder;
+    for (const pick of this._picked) {
+      const option = this._options.find((o) => o.value === pick.value);
+      pick.selected = option?.selected ?? false;
+    }
+  }
+
+  protected override restoreForm(state: FormData): void {
+    super.restoreForm(state);
+    if (state.has('offset')) {
+      const entry = state.get('offset')!;
+      this.offset = asInt(Number.parseFloat(String(entry)));
+    }
+    if (state.has('shift')) {
+      const entry = state.get('shift')!;
+      this.shift = asInt(Number.parseFloat(String(entry)));
+    }
+    if (state.has('placement')) {
+      const entry = state.get('placement')!;
+      this.placement = asPlacement(String(entry));
+    }
+    if (state.has('placeholder')) {
+      const entry = state.get('placeholder')!;
+      this.placeholder = String(entry);
+    }
+    for (const pick of this._picked) {
+      const option = this._options.find((o) => o.value === pick.value);
+      pick.selected = option?.selected ?? false;
+    }
+  }
+
+  protected override updated(props: PropertyValues<this>): void {
+    if (props.has('open')) this.openUpdated();
+    if (props.has('offset')) this.offsetUpdated();
+    if (props.has('shift')) this.shiftUpdated();
+    if (props.has('placement')) this.placementUpdated();
+    if (props.has('placeholder')) this.placeholderUpdated();
+    const positionPropNames = this._positionProps;
+    const changedPropNames = Array.from(props.keys());
+    if (positionPropNames.some((name) => changedPropNames.includes(name))) {
+      this.updatePosition();
+    }
+    return super.updated(props);
+  }
+
+  protected openUpdated(): void {
+    this._internals.ariaExpanded = this.open ? 'true' : 'false';
+    this.ariaExpanded = this.open ? 'true' : 'false';
+  }
+
+  protected offsetUpdated(): void {
+    const offset = this.offset.toString(10);
+    this._formState.set('offset', offset);
+  }
+
+  protected shiftUpdated(): void {
+    const shift = this.shift.toString(10);
+    this._formState.set('shift', shift);
+  }
+
+  protected placementUpdated(): void {
+    this._formState.set('placement', this.placement);
+  }
+
+  protected placeholderUpdated(): void {
+    this._formState.set('placeholder', this.placeholder);
+    this._internals.ariaPlaceholder = this.placeholder;
+    this.ariaPlaceholder = this.placeholder;
+    const inputElement = this.inputElement;
+    if (inputElement == null) return;
+    const selected = this.getOptionsValues();
+    inputElement.value = selected.length === 0 ? this.placeholder : '';
+  }
+
+  protected override optionsUpdated(
     oldValue: ReadonlyArray<HTMLValueOption>,
   ): void {
-    super.optionsChanged(newValue, oldValue);
-
-    for (const option of oldValue) {
-      this.unsubscribe(option, 'click', this.handleOptionClick);
-      this.unsubscribe(option, 'mouseenter', this.handleOptionMouseenter);
-    }
-    for (const option of newValue) {
-      this.subscribe(option, 'click', this.handleOptionClick);
-      this.subscribe(option, 'mouseenter', this.handleOptionMouseenter);
+    super.optionsUpdated(oldValue);
+    for (const pick of this._picked) {
+      const option = this._options.find((o) => o.value === pick.value);
+      pick.selected = option?.selected ?? false;
     }
   }
 
-  protected pickedChanged(
-    newValue: ReadonlyArray<HTMLValueOption>,
-    oldValue: ReadonlyArray<HTMLValueOption>,
-  ): void {
-    for (const option of oldValue) {
-      this.unsubscribe(option, 'beforetoggle', this.handlePickedBeforeToggle);
-      this.unsubscribe(option, 'toggle', this.handlePickedToggle);
-      this.unsubscribe(option, 'change', this.handlePickedChange);
+  protected pickedUpdated(oldValue: ReadonlyArray<HTMLValueOption>): void {
+    for (const pick of oldValue) {
+      this.unsubscribe(pick, 'beforetoggle', this.handlePickedBeforeToggle);
+      this.unsubscribe(pick, 'toggle', this.handlePickedToggle);
+      this.unsubscribe(pick, 'change', this.handlePickedChange);
     }
 
-    for (const option of newValue) {
-      this.subscribe(option, 'beforetoggle', this.handlePickedBeforeToggle);
-      this.subscribe(option, 'toggle', this.handlePickedToggle);
-      this.subscribe(option, 'change', this.handlePickedChange);
+    for (const pick of this._picked) {
+      const option = this._options.find((o) => o.value === pick.value);
+      pick.selected = option?.selected ?? false;
+      this.subscribe(pick, 'beforetoggle', this.handlePickedBeforeToggle);
+      this.subscribe(pick, 'toggle', this.handlePickedToggle);
+      this.subscribe(pick, 'change', this.handlePickedChange);
     }
   }
 
-  protected placeholderChanged(newValue: string): void {
-    this._internals.ariaPlaceholder = newValue;
-    this.ariaPlaceholder = newValue;
-    const selected = getSelectedOptions(this._options.value);
-    this._inputElem.value = selected.length === 0 ? newValue : '';
+  protected override async updateOptions(): Promise<void> {
+    const elements = await this.getDefinedAssignedElements('popover');
+    const newValue = elements.filter(isHTMLValueOption);
+    const oldValue = this._options;
+    if (isEqual(oldValue, newValue)) return;
+
+    this._options = newValue;
+    this.optionsUpdated(oldValue);
   }
 
-  protected openChanged(newValue: boolean): void {
-    this._internals.ariaExpanded = newValue ? 'true' : 'false';
-    this.ariaExpanded = newValue ? 'true' : 'false';
-    this.updatePosition();
-    this._activeElement.value =
-      getFirstOption(getSelectedOptions(this._options.value)) ??
-      getFirstOption(this._options.value);
+  protected async updatePicked(): Promise<void> {
+    const elements = await this.getDefinedAssignedElements('picked');
+    const newValue = elements.filter(isHTMLValueOption);
+    const oldValue = this._options;
+    if (isEqual(oldValue, newValue)) return;
+
+    this._picked = newValue;
+    this.pickedUpdated(oldValue);
   }
 
   protected override selectOption(option: HTMLValueOption): void {
-    if (!this._multiple.value) {
-      for (const other of this._options.value) {
+    if (!this.multiple) {
+      for (const other of this._options) {
         other.selected = other.value === option.value;
       }
-      for (const picked of this._picked.value) {
-        picked.selected = picked.value === option.value;
+      for (const pick of this._picked) {
+        pick.selected = pick.value === option.value;
       }
     } else {
-      for (const other of this._options.value) {
+      for (const other of this._options) {
         if (other.value !== option.value) continue;
         other.selected = true;
       }
-      for (const picked of this._picked.value) {
-        if (picked.value !== option.value) continue;
-        picked.selected = true;
+      for (const pick of this._picked) {
+        if (pick.value !== option.value) continue;
+        pick.selected = true;
       }
     }
     this.saveForm();
   }
 
   protected override deselectOption(option: HTMLValueOption): void {
-    for (const other of this._options.value) {
+    for (const other of this._options) {
       if (other.value !== option.value) continue;
       other.selected = false;
     }
-    for (const picked of this._picked.value) {
+    for (const picked of this._picked) {
       if (picked.value !== option.value) continue;
       picked.selected = false;
     }
@@ -368,112 +420,109 @@ export class IpeComboboxElement
       this._updateCleanup();
       this._updateCleanup = null;
     }
-    if (!this._open.value || !this.isConnected) return;
+    if (!this.open || !this.isConnected) return;
+
+    const popoverSlot = this.popoverSlot;
+    if (popoverSlot == null) return;
+
+    const inputElement = this.inputElement;
+    if (inputElement == null) return;
 
     const middleware: Array<Middleware> = [];
-
-    middleware.push(offsetMiddleware(this._offset.value));
+    middleware.push(offsetMiddleware(this.offset));
 
     let placement: Exclude<Placement, 'auto'> | undefined;
-    if (this._placement.value === 'auto') {
+    if (this.placement === 'auto') {
       middleware.push(autoPlacementMiddleware());
     } else {
-      placement = this._placement.value;
+      placement = this.placement;
       middleware.push(flipMiddleware());
     }
 
-    middleware.push(shiftMiddleware({ padding: this._shift.value }));
+    middleware.push(shiftMiddleware({ padding: this.shift }));
 
-    const style = window.getComputedStyle(this._popoverElem);
+    const style = window.getComputedStyle(popoverSlot);
 
     const strategy = style.position === 'fixed' ? 'fixed' : 'absolute';
 
     const update = () => {
-      computePosition(this._inputElem, this._popoverElem, {
+      computePosition(inputElement, popoverSlot, {
         placement,
         middleware,
         strategy,
       })
         .then((result) => {
-          this._popoverElem.style.left = `${result.x}px`;
-          this._popoverElem.style.top = `${result.y}px`;
-          const rect = this._inputElem.getBoundingClientRect();
-          this._popoverElem.style.width = `${rect.width}px`;
+          popoverSlot.style.left = `${result.x}px`;
+          popoverSlot.style.top = `${result.y}px`;
+          const rect = inputElement.getBoundingClientRect();
+          popoverSlot.style.width = `${rect.width}px`;
           return result;
         })
         .catch((error) => console.error(error));
     };
 
-    this._updateCleanup = autoUpdate(
-      this._inputElem,
-      this._popoverElem,
-      update,
-    );
+    this._updateCleanup = autoUpdate(inputElement, popoverSlot, update);
   }
 
-  protected override assignedOptions(): Array<HTMLValueOption> {
-    if (!this.isConnected) return [];
-    const slot = this.getShadowRootSlot('popover');
-    if (slot == null) return [];
-    const elements = slot.assignedElements();
-    const notDefined = elements.filter((e) => e.matches(':not(:defined)'));
-    const localNames = new Set(Array.from(notDefined, (e) => e.localName));
-    for (const localName of localNames) {
-      window.customElements
-        .whenDefined(localName)
-        .then(() => this.assignSlots())
-        .catch(console.error);
-    }
-    return elements.filter(isHTMLValueOption);
+  protected override handleSlotChange(): void {
+    return;
   }
 
-  protected assignedPicked(): Array<HTMLValueOption> {
-    if (!this.isConnected) return [];
-    const slot = this.getShadowRootSlot('picked');
-    if (slot == null) return [];
-    const elements = slot.assignedElements();
-    const notDefined = elements.filter((e) => e.matches(':not(:defined)'));
-    const localNames = new Set(Array.from(notDefined, (e) => e.localName));
-    for (const localName of localNames) {
-      window.customElements
-        .whenDefined(localName)
-        .then(() => this.assignSlots())
-        .catch(console.error);
-    }
-    return elements.filter(isHTMLValueOption);
+  protected handlePopoverSlotChange(): void {
+    this.updateOptions();
+  }
+
+  protected handlePickedSlotChange(): void {
+    this.updatePicked();
+  }
+
+  protected override handleBlur(event: FocusEvent): void {
+    super.handleBlur(event);
+    this.popoverSlot?.hidePopover();
+    const inputElement = this.inputElement;
+    if (inputElement == null) return;
+    inputElement.inert = true;
   }
 
   protected handleClick(event: MouseEvent): void {
     if (event.target !== this) return;
     this._userInteracted = true;
-    this._inputElem.focus();
+    const inputElement = this.inputElement;
+    if (inputElement == null) return;
+    inputElement.inert = false;
+    inputElement.click();
+  }
+
+  protected handleInputClick(event: MouseEvent): void {
+    event.stopImmediatePropagation();
+    this.focus();
   }
 
   protected override handleKeydown(event: KeyboardEvent): void {
     this._userInteracted = true;
     if (event.target !== this) return;
 
-    const keys = ['Home', 'End', 'ArrowDown', 'ArrowUp', 'Enter', ' '];
+    const keys = ['Home', 'End', 'ArrowDown', 'ArrowUp', 'Enter', ' ', 'Tab'];
     if (!keys.includes(event.key)) return;
 
-    if (this._open.value) {
-      if (this._activeElement.value == null) {
-        this._activeElement.value =
-          getFirstOption(getSelectedOptions(this._options.value)) ??
-          getFirstOption(this._options.value);
-        return;
+    if (this.open) {
+      if (this.activeElement == null) return;
+
+      if (event.key === 'Tab') {
+        // Prevent changing focus when the combobox is opened
+        event.preventDefault();
       }
 
       if (event.key === 'Enter' || event.key === ' ') {
-        const option = this._activeElement.value;
-        const selected = !option.selected;
-        if (selected) {
-          if (!this.canSelect()) return;
-          this.selectNotifyOption(option);
-          return;
+        const selected = !this.activeElement.selected;
+        if (selected && this.canSelect()) {
+          this.selectNotifyOption(this.activeElement);
         }
-        if (!this.canDeselect()) return;
-        this.deselectNotifyOption(option);
+        if (!selected && this.canDeselect()) {
+          this.deselectNotifyOption(this.activeElement);
+        }
+        if (this.multiple) return;
+        this.popoverSlot?.hidePopover();
         return;
       }
 
@@ -481,13 +530,10 @@ export class IpeComboboxElement
         event.preventDefault();
         // Alt + ArrowDow is the same as clicking on the input
         if (event.altKey) {
-          this._inputElem.click();
+          this.inputElement?.click();
           return;
         }
-        this._activeElement.value = nextOptionOf(
-          this._options.value,
-          this._activeElement.value,
-        );
+        this.activeElement = nextOptionOf(this.options, this.activeElement);
         return;
       }
 
@@ -495,35 +541,36 @@ export class IpeComboboxElement
         event.preventDefault();
         // Alt + ArrowUp is the same as clicking on the input
         if (event.altKey) {
-          this._inputElem.click();
+          this.inputElement?.click();
           return;
         }
-        this._activeElement.value = previousOptionOf(
-          this._options.value,
-          this._activeElement.value,
+        this.activeElement = previousOptionOf(
+          this._options,
+          this.activeElement,
         );
         return;
       }
 
       if (event.key === 'Home') {
         event.preventDefault();
-        this._activeElement.value = getFirstOption(this._options.value);
+        this.activeElement = this.first();
         return;
       }
       if (event.key === 'End') {
         event.preventDefault();
-        this._activeElement.value = getLastOption(this._options.value);
+        this.activeElement = this.last();
         return;
       }
 
       return;
     }
 
-    // Don't do anything, just open the popover
     if (event.key === 'Enter' || event.key === ' ') {
-      this._activeElement.value =
-        getFirstOption(getSelectedOptions(this._options.value)) ??
-        getFirstOption(this._options.value);
+      const inputElement = this.inputElement;
+      if (inputElement == null) return;
+      inputElement.inert = false;
+      inputElement.click();
+      // this.activeElement = this.selectedOption ?? this.first();
       return;
     }
 
@@ -532,39 +579,37 @@ export class IpeComboboxElement
     if (event.key === 'ArrowDown') {
       event.preventDefault();
       // Alt + ArrowDow or multiple is the same as clicking on the input
-      if (event.altKey || this._multiple.value) {
-        this._inputElem.click();
+      if (event.altKey || this.multiple) {
+        this.inputElement?.click();
         return;
       }
-      const current = getFirstOption(getSelectedOptions(this._options.value));
+      const current = this.selectedOption;
       next =
-        current != null
-          ? nextOptionOf(this._options.value, current)
-          : getFirstOption(this._options.value);
+        current != null ? nextOptionOf(this._options, current) : this.first();
     }
 
     if (event.key === 'ArrowUp') {
       event.preventDefault();
       // Alt + ArrowUp or multiple is the same as clicking on the input
-      if (event.altKey || this._multiple.value) {
-        this._inputElem.click();
+      if (event.altKey || this.multiple) {
+        this.inputElement?.click();
         return;
       }
-      const current = getFirstOption(getSelectedOptions(this._options.value));
+      const current = this.selectedOption;
       next =
         current != null
-          ? previousOptionOf(this._options.value, current)
-          : getLastOption(this._options.value);
+          ? previousOptionOf(this._options, current)
+          : this.last();
     }
 
     if (event.key === 'Home') {
       event.preventDefault();
-      next = getFirstOption(this._options.value);
+      next = this.first();
     }
 
     if (event.key === 'End') {
       event.preventDefault();
-      next = getLastOption(this._options.value);
+      next = this.last();
     }
 
     if (next == null) return;
@@ -581,35 +626,27 @@ export class IpeComboboxElement
   }
 
   protected override handleOptionClick(event: MouseEvent): void {
-    this._userInteracted = true;
-    if (this._multiple.value) return;
-    const option = this._options.value.find((o) => o === event.target);
-    if (option == null) return;
-    this._popoverElem.hidePopover();
+    super.handleOptionClick(event);
+    if (this.multiple) return;
+    this.popoverSlot?.hidePopover();
   }
 
-  protected handleOptionMouseenter(event: MouseEvent): void {
-    const option = this._options.value.find((o) => o === event.target);
-    if (option == null) return;
-    if (option.disabled) return;
-    this._activeElement.value = option;
-  }
+  protected handlePickedChange(event: Event): void {
+    const pick = this._picked.find((p) => p === event.target);
+    if (pick == null) return;
 
-  protected handlePickedChange(): void {
-    for (const picked of this._picked.value) {
-      const option = this._options.value.find((o) => o.value === picked.value);
-      picked.selected = option?.selected ?? false;
-    }
+    const option = this._options.find((o) => o.value === pick.value);
+    pick.selected = option?.selected ?? false;
   }
 
   protected handlePickedBeforeToggle(event: ToggleEvent): void {
     const newState = event.newState;
     if (newState !== 'selected' && newState !== 'unselected') return;
 
-    const picked = this._picked.value.find((o) => o === event.target);
+    const picked = this._picked.find((o) => o === event.target);
     if (picked == null) return;
 
-    const option = this._options.value.find((o) => o.value === picked.value);
+    const option = this._options.find((o) => o.value === picked.value);
     if (option == null) return;
 
     this._userInteracted = true;
@@ -622,7 +659,7 @@ export class IpeComboboxElement
       if (!option.selected) return;
       if (this.canDeselect()) return;
     }
-    console.log('aqui');
+
     event.preventDefault();
   }
 
@@ -630,10 +667,10 @@ export class IpeComboboxElement
     const newState = event.newState;
     if (newState !== 'selected' && newState !== 'unselected') return;
 
-    const picked = this._picked.value.find((o) => o === event.target);
-    if (picked == null) return;
+    const pick = this._picked.find((o) => o === event.target);
+    if (pick == null) return;
 
-    const option = this._options.value.find((o) => o.value === picked.value);
+    const option = this._options.find((o) => o.value === pick.value);
     if (option == null) return;
 
     this._userInteracted = true;
@@ -649,19 +686,16 @@ export class IpeComboboxElement
   }
 
   protected handlePopoverBeforetoggle(event: ToggleEvent): void {
-    this._open.value = event.newState === 'open';
-  }
+    this.open = event.newState === 'open';
+    this.activeElement = this.selectedOption ?? this.first();
+    if (event.newState === 'open') return;
 
-  static override get observedAttributes(): Array<string> {
-    return [
-      ...super.observedAttributes,
-      'placeholder',
-      'search',
-      'open',
-      'offset',
-      'shift',
-      'placement',
-    ];
+    this.focus();
+
+    const inputElement = this.inputElement;
+    if (inputElement == null) return;
+
+    inputElement.inert = true;
   }
 }
 

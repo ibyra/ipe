@@ -1,100 +1,89 @@
-import { asChecked } from './commons';
-import { type Checked } from './dom';
+import { css, type PropertyDeclarations, type PropertyValues } from 'lit';
+import {
+  type Checked,
+  asChecked,
+  CheckedAttributeConverter,
+  StringAttributeConverter,
+} from './commons';
 import {
   type FormValidity,
   IpeElementFormSingleValue,
 } from './ipe-element-form';
-import { FormProperty, attributeParsers, formDataParsers } from './property';
 
 export class IpeCheckboxElement extends IpeElementFormSingleValue {
-  protected _value = new FormProperty(this, {
-    name: 'value',
-    value: 'on',
-    cast: String,
-    form: formDataParsers.str,
-  });
+  static override properties: PropertyDeclarations = {
+    ...super.properties,
+    value: {
+      reflect: true,
+      attribute: 'value',
+      converter: new StringAttributeConverter('on'),
+    },
+    checked: {
+      reflect: true,
+      attribute: 'checked',
+      converter: new CheckedAttributeConverter(),
+    },
+  };
 
-  protected _checked = new FormProperty(this, {
-    name: 'checked',
-    value: 'false' as Checked,
-    cast: asChecked,
-    attribute: attributeParsers.checked,
-    form: formDataParsers.checked,
-  });
+  static override styles = css`
+    :host {
+      display: inline-block;
+      height: 1.125em;
+      width: 1.125em;
+      background-color: white;
+      border: solid 0.125em dimgray;
+      border-radius: 0.125em;
+      overflow: hidden;
+      vertical-align: middle;
+      line-height: 1;
+      cursor: pointer;
+    }
+    :host([checked='true']) {
+      background-color: black;
+      box-shadow:
+        inset 0.25em 0.25em 0 white,
+        inset -0.25em -0.25em 0 white;
+    }
+    :host([checked='mixed']) {
+      background-color: gray;
+      box-shadow:
+        inset 0.25em 0.25em 0 white,
+        inset -0.25em -0.25em 0 white;
+    }
+    :host([aria-invalid='true']) {
+      border-color: red;
+    }
+  `;
 
-  protected override get template(): string | null {
-    return `
-      <style>
-        :host {
-          display: inline-block;
-          height: 1.125em;
-          width: 1.125em;
-          background-color: white;
-          border: solid 0.125em dimgray;
-          border-radius: 0.125em;
-          overflow: hidden;
-          vertical-align: middle;
-          line-height: 1;
-          cursor: pointer;
-        }
-        :host([checked='true']) {
-          background-color: black;
-          box-shadow:
-            inset 0.25em 0.25em 0 white,
-            inset -0.25em -0.25em 0 white;
-        }
-        :host([checked='mixed']) {
-          background-color: gray;
-          box-shadow:
-            inset 0.25em 0.25em 0 white,
-            inset -0.25em -0.25em 0 white;
-        }
-        :host([aria-invalid='true']) {
-          border-color: red;
-        }
-      </style>
-      <slot></slot>
-    `;
-  }
+  static override content = `
+    <slot></slot>
+  `;
 
-  get value(): string {
-    return this._value.value;
-  }
-  set value(value: string) {
-    this._value.value = value;
-  }
+  public declare value: string;
+  public declare checked: Checked;
 
-  get checked(): Checked {
-    return this._checked.value;
-  }
-  set checked(value: Checked) {
-    this._checked.value = value;
-  }
+  protected declare _defaultValue: string;
+  protected declare _defaultChecked: Checked;
 
-  public override get formValidity(): FormValidity {
-    const { flags, messages } = super.formValidity;
-    flags.valueMissing = this.required && this._checked.value !== 'true';
-    messages.valueMissing = this.dataset['valueMissing'] ?? 'Required';
-    return { flags, messages };
-  }
-
-  public override get formValue(): FormData | null {
-    if (this._checked.value !== 'true') return null;
-    const value = new FormData();
-    value.set(this._name.value, this._value.value);
-    return value;
+  constructor() {
+    super();
+    this.value = 'on';
+    this.checked = 'false';
+    this._defaultValue = 'on';
+    this._defaultChecked = 'false';
   }
 
   override connectedCallback(): void {
     super.connectedCallback();
+    this._defaultValue = this.value;
+    this._defaultChecked = this.checked;
+
     this._internals.role = 'checkbox';
 
-    if (this.hasAttribute('value')) {
-      this._value.init(this.getAttribute('value') ?? this._value.value);
-    }
     if (!this.hasAttribute('tabindex')) {
       this.tabIndex = 0;
     }
+
     this.addEventListener('click', this.handleClick);
     this.addEventListener('keydown', this.handleKeydown);
   }
@@ -105,29 +94,63 @@ export class IpeCheckboxElement extends IpeElementFormSingleValue {
     this.removeEventListener('click', this.handleClick);
   }
 
-  override propertyChanged(
-    name: string | symbol,
-    oldValue: unknown,
-    newValue: unknown,
-  ): void {
-    if (name === this._checked.name) {
-      const curr = newValue as Checked;
-      return this.checkedChanged(curr);
-    }
-    return super.propertyChanged(name, oldValue, newValue);
+  protected override get _formProps(): Array<keyof this> {
+    return [...super._formProps, 'value', 'checked'];
   }
 
-  protected checkedChanged(newValue: Checked): void {
-    this._internals.ariaChecked = newValue;
-    this.ariaChecked = newValue;
+  public override get _formValidity(): FormValidity {
+    const formValidity = super._formValidity;
+    formValidity.flags.valueMissing = this.required && this.checked !== 'true';
+    formValidity.messages.valueMissing =
+      this.dataset['valueMissing'] ?? 'Required';
+    return formValidity;
+  }
+
+  public override get _formValue(): FormData | null {
+    if (this.checked !== 'true') return null;
+    const value = new FormData();
+    value.set(this.name, this.value);
+    return value;
+  }
+
+  protected override resetForm(): void {
+    super.resetForm();
+    this.value = this._defaultValue;
+    this.checked = this._defaultChecked;
+  }
+
+  protected override restoreForm(state: FormData): void {
+    super.restoreForm(state);
+    if (state.has('value')) {
+      this.value = String(state.get('value'));
+    }
+    if (state.has('checked')) {
+      this.checked = asChecked(state.get('checked'));
+    }
+  }
+
+  protected override updated(props: PropertyValues<this>): void {
+    if (props.has('value')) this.valueUpdated();
+    if (props.has('checked')) this.checkedUpdated();
+    return super.updated(props);
+  }
+
+  protected valueUpdated(): void {
+    this._formState.set('value', this.value);
+  }
+
+  protected checkedUpdated(): void {
+    this._formState.set('checked', this.checked);
+    this._internals.ariaChecked = this.checked;
+    this.ariaChecked = this.checked;
   }
 
   protected handleClick(event: MouseEvent): void {
     // Prevent double handling click when the checkbox is inside a <label>.
     event.preventDefault();
     this._userInteracted = true;
-    const checked = this._checked.value === 'false' ? 'true' : 'false';
-    this._checked.value = checked;
+    const checked = this.checked === 'false' ? 'true' : 'false';
+    this.checked = checked;
     this.notifyInput();
     this.notifyChange();
   }
@@ -138,14 +161,10 @@ export class IpeCheckboxElement extends IpeElementFormSingleValue {
     // Prevent space scroll
     event.preventDefault();
     this._userInteracted = true;
-    const checked = this._checked.value === 'false' ? 'true' : 'false';
-    this._checked.value = checked;
+    const checked = this.checked === 'false' ? 'true' : 'false';
+    this.checked = checked;
     this.notifyInput();
     this.notifyChange();
-  }
-
-  static override get observedAttributes(): string[] {
-    return [...super.observedAttributes, 'checked', 'value'];
   }
 }
 

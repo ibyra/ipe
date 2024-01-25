@@ -1,90 +1,127 @@
 import { isEqual } from 'moderndash';
-import { type HTMLFormControl } from './dom';
+import {
+  type HTMLFormControl,
+  getErrorMessageElement,
+  isHTMLFormControl,
+} from './commons';
 import { IpeElement } from './ipe-element';
-import { getErrorMessageElement, isHTMLFormControl } from './commons';
-import { Property } from './property';
+import { css } from 'lit';
+
+// TODO: Replace setting 'aria-invalid' attribute on the field to use a custom
+//       pseudo class state.
 
 export class IpeFieldElement extends IpeElement {
-  protected _invalidated = false;
+  static override styles = css`
+    :host {
+      display: block;
+    }
+  `;
 
-  protected _controls = new Property(this, {
-    name: 'controls',
-    equals: isEqual,
-    value: [] as ReadonlyArray<HTMLFormControl>,
-  });
+  static override content = `
+    <slot><slot>
+  `;
 
-  protected _internals = this.attachInternals();
+  protected declare _invalidated: boolean;
+  protected declare _internals: ElementInternals;
+  protected declare _controls: ReadonlyArray<HTMLFormControl>;
+  protected declare _controlObserver: MutationObserver;
 
-  protected override get template(): string | null {
-    return `
-      <style>
-        :host {
-          display: block;
-        }
-      </style>
-      <slot></slot>`;
+  constructor() {
+    super();
+    this._invalidated = false;
+    this._internals = this.attachInternals();
+    this._controls = [];
+    this._controlObserver = new MutationObserver((mutations) => {
+      for (const mutation of mutations) {
+        this.handleMutation(mutation);
+      }
+    });
   }
 
   get controls(): Array<HTMLFormControl> {
-    return Array.from(this._controls.value);
+    return Array.from(this._controls);
   }
 
-  override assignSlots(): void {
-    super.assignSlots();
-    const controls = this.assignedControls();
-    this._controls.value = controls;
+  override connectedCallback(): void {
+    super.connectedCallback();
+    this.updateControls();
+    const content = this.contentSlot;
+    if (content == null) return;
+    this.subscribe(content, 'slotchange', this.handleSlotChange);
   }
 
-  override propertyChanged(
-    name: string | symbol,
-    oldValue: unknown,
-    newValue: unknown,
-  ): void {
-    if (name === 'controls') {
-      const curr = newValue as ReadonlyArray<HTMLFormControl>;
-      const prev = oldValue as ReadonlyArray<HTMLFormControl>;
-      return this.controlsChanged(curr, prev);
-    }
-    super.propertyChanged(name, oldValue, newValue);
+  override disconnectedCallback(): void {
+    super.disconnectedCallback();
+    this.updateControls();
+    const content = this.contentSlot;
+    if (content == null) return;
+    this.unsubscribe(content, 'slotchange', this.handleSlotChange);
   }
 
-  protected controlsChanged(
-    newValue: ReadonlyArray<HTMLFormControl>,
-    oldValue: ReadonlyArray<HTMLFormControl>,
-  ): void {
+  protected get contentSlot(): HTMLSlotElement | null {
+    const element = this.getSlot();
+    return element;
+  }
+
+  protected controlsUpdated(oldValue: ReadonlyArray<HTMLFormControl>): void {
+    this._controlObserver.disconnect();
+
     for (const control of oldValue) {
-      this.unsubscribe(control, 'invalid', this.handleInvalid);
-      this.unsubscribe(control, 'change', this.handleChange);
+      this.unsubscribe(control, 'invalid', this.handleControlInvalid);
+      this.unsubscribe(control, 'change', this.handleControlChange);
       if (control.form != null) {
-        this.unsubscribe(control.form, 'reset', this.handleReset);
+        this.unsubscribe(control.form, 'reset', this.handleFormReset);
       }
     }
-    for (const control of newValue) {
-      this.subscribe(control, 'invalid', this.handleInvalid);
-      this.subscribe(control, 'change', this.handleChange);
+
+    for (const control of this._controls) {
+      this._controlObserver.observe(control, {
+        attributes: true,
+        attributeFilter: ['aria-errormessage'],
+      });
+      this.subscribe(control, 'invalid', this.handleControlInvalid);
+      this.subscribe(control, 'change', this.handleControlChange);
       if (control.form != null) {
-        this.subscribe(control.form, 'reset', this.handleReset);
+        this.subscribe(control.form, 'reset', this.handleFormReset);
       }
-      const errormessage = getErrorMessageElement(control);
-      if (errormessage != null && errormessage.innerText.length > 0) {
-        this._invalidated = true;
-        this.ariaInvalid = 'true';
-        this._internals.ariaInvalid = 'true';
-        control.setCustomValidity(errormessage.innerText);
-      }
+      this.updateErrorMessage(control);
     }
   }
 
-  protected assignedControls(): Array<HTMLFormControl> {
-    if (!this.isConnected) return [];
-    const slot = this.getShadowRootSlot();
-    if (slot == null) return [];
-    return slot.assignedElements().filter(isHTMLFormControl);
+  protected async updateControls(): Promise<void> {
+    const elements = await this.getDefinedAssignedElements();
+    const newValue = elements.filter(isHTMLFormControl);
+    const oldValue = this._controls;
+    if (isEqual(oldValue, newValue)) return;
+
+    this._controls = newValue;
+    this.controlsUpdated(oldValue);
   }
 
-  protected handleInvalid(event: Event): void {
+  protected updateErrorMessage(control: HTMLFormControl): void {
+    const errormessage = getErrorMessageElement(control);
+    if (errormessage != null && errormessage.innerText.length > 0) {
+      this._invalidated = true;
+      this.ariaInvalid = 'true';
+      this._internals.ariaInvalid = 'true';
+      control.setCustomValidity(errormessage.innerText);
+    }
+  }
+
+  protected handleSlotChange(): void {
+    this.updateControls();
+  }
+
+  protected handleMutation(mutation: MutationRecord): void {
+    if (mutation.type !== 'attributes') return;
+    const target = mutation.target;
+    if (!isHTMLFormControl(target)) return;
+    this.updateErrorMessage(target);
+  }
+
+  protected handleControlInvalid(event: Event): void {
     const target = event.target;
-    const control = this._controls.value.find((c) => c === target);
+    const control = this._controls.find((control) => control === target);
     if (control == null) return;
 
     this.ariaInvalid = 'true';
@@ -117,16 +154,16 @@ export class IpeFieldElement extends IpeElement {
     errormessage.ariaLive = 'assertive';
   }
 
-  protected handleChange(event: Event): void {
+  protected handleControlChange(event: Event): void {
     // If was invalidated once, check validity on every change
     if (!this._invalidated) return;
 
     const target = event.target;
-    const control = this._controls.value.find((c) => c === target);
+    const control = this._controls.find((c) => c === target);
     if (control == null) return;
 
     control.setCustomValidity('');
-    const invalids = this._controls.value.filter((c) => !c.checkValidity());
+    const invalids = this._controls.filter((c) => !c.checkValidity());
     if (invalids.length > 0) return;
 
     this.ariaInvalid = 'false';
@@ -137,11 +174,11 @@ export class IpeFieldElement extends IpeElement {
     errormessage.replaceChildren();
   }
 
-  protected handleReset(): void {
+  protected handleFormReset(): void {
     this._invalidated = false;
     this.ariaInvalid = 'false';
     this._internals.ariaInvalid = 'false';
-    for (const control of this._controls.value) {
+    for (const control of this._controls) {
       control.setCustomValidity('');
       const errormessage = getErrorMessageElement(control);
       if (errormessage != null) {

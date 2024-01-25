@@ -1,239 +1,189 @@
+import { css, type PropertyDeclarations, type PropertyValues } from 'lit';
 import { isEqual } from 'moderndash';
-import { asInt, isHTMLButton } from './commons';
-import { type HTMLDisclosure, type HTMLButton } from './dom';
+import {
+  type HTMLDisclosure,
+  type HTMLButton,
+  isHTMLButton,
+  BoolAttributeConverter,
+  IntAttributeConverter,
+  StringAttributeConverter,
+} from './commons';
 import { IpeElement } from './ipe-element';
-import { attributeParsers, Property } from './property';
 
 // TODO: Add "orientation" to allow horizontal accordions
 
 // TODO: Add support for "role=button" to be a summary
 
 export class IpeDisclosureElement extends IpeElement implements HTMLDisclosure {
-  protected _disabled = new Property(this, {
-    name: 'disabled',
-    cast: Boolean,
-    value: false,
-    attribute: attributeParsers.bool,
-  });
+  static override properties: PropertyDeclarations = {
+    id: {
+      reflect: true,
+      attribute: 'id',
+      converter: new StringAttributeConverter(''),
+    },
+    open: {
+      reflect: false,
+      attribute: 'open',
+      converter: new BoolAttributeConverter(),
+    },
+    disabled: {
+      reflect: true,
+      attribute: 'disabled',
+      converter: new BoolAttributeConverter(),
+    },
+    duration: {
+      reflect: true,
+      attribute: 'duration',
+      converter: new IntAttributeConverter(150),
+    },
+    delay: {
+      reflect: true,
+      attribute: 'delay',
+      converter: new IntAttributeConverter(0),
+    },
+    easing: {
+      reflect: true,
+      attribute: 'easing',
+      converter: new StringAttributeConverter('ease-in-out'),
+    },
+  };
 
-  protected _open = new Property(this, { name: 'open', value: false });
+  static override styles = css`
+    :host {
+      display: block;
+      overflow: hidden;
+    }
+    #content {
+      display: none;
+    }
+    :host([open]) #content {
+      display: unset;
+    }
+  `;
 
-  protected _duration = new Property(this, {
-    name: 'duration',
-    cast: asInt,
-    value: 150,
-    attribute: attributeParsers.int,
-  });
+  static override content = `
+    <slot id="summary" name="summary" part="summary"></slot>
+    <slot id="content" part="content"></slot>
+  `;
 
-  protected _delay = new Property(this, {
-    name: 'delay',
-    cast: asInt,
-    value: 0,
-    attribute: attributeParsers.int,
-  });
+  public declare open: boolean;
+  public declare disabled: boolean;
+  public declare duration: number;
+  public declare delay: number;
+  public declare easing: string;
 
-  protected _easing = new Property(this, {
-    name: 'easing',
-    cast: String,
-    value: 'ease-in-out',
-    attribute: attributeParsers.str,
-  });
+  protected declare _animation: Animation | null;
+  protected declare _internals: ElementInternals;
+  protected declare _buttons: ReadonlyArray<HTMLButton>;
+  protected declare _observer: MutationObserver;
 
-  protected _summaries = new Property(this, {
-    name: 'summaries',
-    equals: isEqual,
-    value: [] as ReadonlyArray<HTMLButton>,
-  });
-
-  protected _animation: Animation | null = null;
-
-  protected _internals: ElementInternals = this.attachInternals();
-
-  protected override get template(): string {
-    return `
-      <style>
-        :host {
-          display: block;
-          overflow: hidden;
-        }
-        :host #content {
-          display: none;
-        }
-        :host([open]) #content {
-          display: unset;
-        }
-      </style>
-      <slot id="summary" name="summary" part="summary"></slot>
-      <slot id="content" part="content"></slot>
-    `;
-  }
-
-  override get id(): string {
-    return super.id;
-  }
-
-  override set id(value: string) {
-    super.id = value;
-    this.idChanged(super.id);
-  }
-
-  get disabled(): boolean {
-    return this._disabled.value;
-  }
-  set disabled(value: boolean) {
-    this._disabled.value = value;
-  }
-
-  get open(): boolean {
-    return this._open.value;
-  }
-  set open(value: boolean) {
-    this._open.value = value;
+  constructor() {
+    super();
+    this.open = false;
+    this.disabled = false;
+    this.duration = 150;
+    this.delay = 0;
+    this.easing = 'ease-in-out';
+    this._animation = null;
+    this._internals = this.attachInternals();
+    this._buttons = [];
+    this._observer = new MutationObserver((mutations) => {
+      for (const mutation of mutations) {
+        this.handleMutation(mutation);
+      }
+    });
   }
 
   get selected(): boolean {
-    // console.log(this, this._open.value);
-    return this._open.value;
+    return this.open;
   }
   set selected(value: boolean) {
-    this._open.value = value;
+    this.open = value;
   }
 
-  get duration(): number {
-    return this._duration.value;
-  }
-  set duration(value: number) {
-    this._duration.value = value;
-  }
-
-  get delay(): number {
-    return this._delay.value;
-  }
-  set delay(value: number) {
-    this._delay.value = value;
-  }
-
-  get easing(): string {
-    return this._easing.value;
-  }
-  set easing(value: string) {
-    this._easing.value = value;
-  }
-
-  get summaries(): Array<Element> {
-    return Array.from(this._summaries.value);
+  get buttons(): Array<HTMLButton> {
+    return Array.from(this._buttons);
   }
 
   toggle(): void {
-    this._open.value = !this._open.value;
+    this.open = !this.open;
   }
 
   select(): void {
-    this._open.value = true;
+    this.open = true;
   }
 
   deselect(): void {
-    this._open.value = false;
+    this.open = false;
   }
 
   override connectedCallback(): void {
     super.connectedCallback();
-    const open = this.getAttribute('open');
-    this._open.value = open != null;
-
-    const id = this.getAttribute('id');
-    if (id != null) {
-      this.idChanged(id);
-    }
+    this.updateButtons();
+    this._observer.observe(this, {
+      subtree: true,
+      attributes: true,
+      attributeFilter: ['type'],
+    });
+    const summary = this.summarySlot;
+    if (summary == null) return;
+    this.subscribe(summary, 'slotchange', this.handleSummarySlotChange);
   }
 
   override disconnectedCallback(): void {
     super.disconnectedCallback();
-    this._summaries.value = [];
-    if (this._animation != null) {
-      this._animation.cancel();
+    this.updateButtons();
+    const summary = this.summarySlot;
+    if (summary == null) return;
+    this.unsubscribe(summary, 'slotchange', this.handleSummarySlotChange);
+  }
+
+  protected get summarySlot(): HTMLSlotElement | null {
+    const element = this.getSlot('summary');
+    return element;
+  }
+
+  protected get contentSlot(): HTMLSlotElement | null {
+    const element = this.getSlot();
+    return element;
+  }
+
+  protected override updated(props: PropertyValues<this>): void {
+    if (props.has('id')) this.idUpdated();
+    if (props.has('disabled')) this.disabledUpdated();
+    if (props.has('open')) this.openUpdated();
+    return super.updated(props);
+  }
+
+  protected idUpdated(): void {
+    for (const element of this._buttons) {
+      if (this.id === '') {
+        element.removeAttribute('aria-controls');
+      } else {
+        element.setAttribute('aria-controls', this.id);
+      }
     }
   }
 
-  override assignSlots(): void {
-    super.assignSlots();
-    this._summaries.value = this.assignedSummaries();
-  }
-
-  override shouldPropertyChange(
-    name: string | symbol,
-    oldValue: unknown,
-    newValue: unknown,
-  ): boolean {
-    if (name === 'open') {
-      const curr = newValue as boolean;
-      const prev = oldValue as boolean;
-      return this.shouldOpenChange(curr, prev);
-    }
-    return super.shouldPropertyChange(name, oldValue, newValue);
-  }
-
-  override propertyChanged(
-    name: string | symbol,
-    oldValue: unknown,
-    newValue: unknown,
-  ): void {
-    if (name === this._disabled.name) {
-      const curr = newValue as boolean;
-      return this.disabledChanged(curr);
-    }
-    if (name === this._open.name) {
-      const curr = newValue as boolean;
-      const prev = oldValue as boolean;
-      return this.openChanged(curr, prev);
-    }
-    if (name === this._summaries.name) {
-      const curr = newValue as ReadonlyArray<HTMLButton>;
-      const prev = oldValue as ReadonlyArray<HTMLButton>;
-      return this.summariesChanged(curr, prev);
-    }
-    super.propertyChanged(name, oldValue, newValue);
-  }
-
-  protected shouldOpenChange(newValue: boolean, oldValue: boolean): boolean {
-    const event = new ToggleEvent('beforetoggle', {
-      cancelable: true,
-      newState: newValue ? 'open' : 'closed',
-      oldState: oldValue ? 'open' : 'closed',
-    });
-    const proceed = this.dispatchEvent(event);
-    return proceed;
-  }
-
-  protected disabledChanged(newValue: boolean): void {
-    this.inert = newValue;
-    this.ariaDisabled = newValue ? 'true' : 'false';
-    this._internals.ariaDisabled = newValue ? 'true' : 'false';
-    for (const summary of this._summaries.value) {
-      summary.disabled = newValue;
+  protected disabledUpdated(): void {
+    this.ariaDisabled = this.disabled ? 'true' : 'false';
+    this._internals.ariaDisabled = this.disabled ? 'true' : 'false';
+    for (const button of this.buttons) {
+      button.disabled = this.disabled;
     }
   }
 
-  protected openChanged(newValue: boolean, oldValue: boolean): void {
-    this._internals.ariaExpanded = newValue ? 'true' : 'false';
+  protected openUpdated(): void {
+    this._internals.ariaExpanded = this.open ? 'true' : 'false';
 
-    const event = new ToggleEvent('toggle', {
-      cancelable: false,
-      newState: newValue ? 'open' : 'closed',
-      oldState: oldValue ? 'open' : 'closed',
-    });
-    this.dispatchEvent(event);
-
-    if (this._animation != null) {
-      this._animation.cancel();
-    }
+    if (this._animation != null) this._animation.cancel();
 
     const startHeight = `${this.offsetHeight}px`;
 
-    if (newValue) {
+    if (this.open) {
       this.toggleAttribute('open', true);
       const endHeight = `${this.offsetHeight}px`;
-      for (const element of this._summaries.value) {
+      for (const element of this.buttons) {
         element.ariaExpanded = 'true';
       }
       this._animation = this.animate(
@@ -243,13 +193,15 @@ export class IpeDisclosureElement extends IpeElement implements HTMLDisclosure {
       this.subscribe(this._animation, 'cancel', this.handleOpenAnimationEnd);
       this.subscribe(this._animation, 'finish', this.handleOpenAnimationEnd);
     } else {
-      let heightSum = 0;
-      for (const element of this._summaries.value) {
+      for (const element of this.buttons) {
         element.ariaExpanded = 'false';
-        const rect = element.getBoundingClientRect();
-        heightSum = heightSum + rect.height;
       }
-      const endHeight = `${heightSum}px`;
+      const summary = this.summarySlot!;
+      summary.style.setProperty('display', 'block');
+      const rect = summary.getBoundingClientRect();
+      summary.style.removeProperty('display');
+      const height = rect.height;
+      const endHeight = `${height}px`;
       this._animation = this.animate(
         { height: [startHeight, endHeight] },
         { duration: this.duration, delay: this.delay, easing: this.easing },
@@ -259,44 +211,73 @@ export class IpeDisclosureElement extends IpeElement implements HTMLDisclosure {
     }
   }
 
-  protected summariesChanged(
-    newValue: ReadonlyArray<HTMLButton>,
-    oldValue: ReadonlyArray<HTMLButton>,
-  ): void {
-    for (const summary of oldValue) {
-      this.unsubscribe(summary, 'click', this.handleSummaryClick);
-      summary.removeAttribute('aria-controls');
+  protected buttonsUpdated(oldValue: ReadonlyArray<HTMLButton>): void {
+    for (const element of oldValue) {
+      this.unsubscribe(element, 'click', this.handleButtonClick);
+      element.ariaExpanded = null;
+      element.removeAttribute('aria-controls');
     }
-    for (const summary of newValue) {
-      this.subscribe(summary, 'click', this.handleSummaryClick);
-      summary.disabled = this.disabled;
-      summary.ariaExpanded = this.open ? 'true' : 'false';
+
+    for (const element of this._buttons) {
+      this.subscribe(element, 'click', this.handleButtonClick);
+      element.disabled = this.disabled;
+      element.ariaExpanded = this.open ? 'true' : 'false';
       if (this.id === '') {
-        summary.removeAttribute('aria-controls');
+        element.removeAttribute('aria-controls');
       } else {
-        summary.setAttribute('aria-controls', this.id);
+        element.setAttribute('aria-controls', this.id);
       }
     }
   }
 
-  protected idChanged(newValue: string): void {
-    for (const summary of this.summaries) {
-      if (newValue === '') {
-        summary.removeAttribute('aria-controls');
-      } else {
-        summary.setAttribute('aria-controls', newValue);
-      }
-    }
+  protected async updateButtons(): Promise<void> {
+    const elements = await this.getDefinedAssignedElements('summary');
+    const newValue = elements.filter(isHTMLButton);
+    const oldValue = this._buttons;
+    if (isEqual(oldValue, newValue)) return;
+
+    this._buttons = newValue;
+    this.buttonsUpdated(oldValue);
   }
 
-  protected assignedSummaries(): Array<HTMLButton> {
-    const slot = this.getShadowRootSlot('summary');
-    if (slot == null) return [];
-    return slot.assignedElements().filter(isHTMLButton);
+  protected toggleOpen(): void {
+    const newValue = !this.open;
+    const oldValue = this.open;
+
+    const beforeToggle = new ToggleEvent('beforetoggle', {
+      cancelable: true,
+      newState: newValue ? 'open' : 'closed',
+      oldState: oldValue ? 'open' : 'closed',
+    });
+    const proceed = this.dispatchEvent(beforeToggle);
+    if (!proceed) return;
+
+    this.open = newValue;
+
+    const afterToggle = new ToggleEvent('toggle', {
+      cancelable: false,
+      newState: this.open ? 'open' : 'closed',
+      oldState: oldValue ? 'open' : 'closed',
+    });
+    this.dispatchEvent(afterToggle);
   }
 
-  protected handleSummaryClick(): void {
-    this._open.value = !this._open.value;
+  protected handleMutation(mutation: MutationRecord) {
+    if (mutation.type !== 'attributes') return;
+
+    const { target } = mutation;
+    if (!(target instanceof Element)) return;
+    if (target.assignedSlot !== this.summarySlot) return;
+
+    this.updateButtons();
+  }
+
+  protected handleSummarySlotChange(): void {
+    this.updateButtons();
+  }
+
+  protected handleButtonClick(): void {
+    this.toggleOpen();
   }
 
   protected handleOpenAnimationEnd(): void {
@@ -306,18 +287,6 @@ export class IpeDisclosureElement extends IpeElement implements HTMLDisclosure {
   protected handleCloseAnimationEnd(): void {
     this._animation = null;
     this.toggleAttribute('open', false);
-  }
-
-  static override get observedAttributes(): Array<string> {
-    return [
-      ...super.observedAttributes,
-      'open',
-      'disabled',
-      'id',
-      'duration',
-      'delay',
-      'easing',
-    ];
   }
 }
 

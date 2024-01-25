@@ -19,20 +19,13 @@
       }
     </style>
     <script type="module" src="./ipe-field.ts"></script>
+    <script type="module" src="./ipe-checkbox.ts"></script>
   </head>
   <body>
     <main>
       <h1><code>ipe-field</code> demo</h1>
       <form class="table">
         <ipe-field>
-          <template shadowrootmode="open">
-            <style>
-              :host {
-                display: block;
-              }
-            </style>
-            <slot></slot>
-          </template>
           <label for="email">E-mail</label>
           <input
             id="email"
@@ -49,20 +42,13 @@
           </small>
         </ipe-field>
         <ipe-field>
-          <template shadowrootmode="open">
-            <style>
-              :host {
-                display: block;
-              }
-            </style>
-            <slot></slot>
-          </template>
           <label for="password">Password</label>
           <input
             id="password"
             type="password"
             name="password"
             required
+            minlength="6"
             aria-errormessage="password-errormessage"
             data-value-missing="Please, fill this with your password."
           />
