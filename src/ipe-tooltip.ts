@@ -9,11 +9,8 @@ export class IpeTooltip extends IpeFloatElement {
     this.hidePopover();
   }
 
-  protected override anchorChanged(
-    newValue: Element | null,
-    oldValue: Element | null,
-  ): void {
-    super.anchorChanged(newValue, oldValue);
+  protected override anchorUpdated(oldValue: Element | null): void {
+    super.anchorUpdated(oldValue);
     if (oldValue != null) {
       // @ts-expect-error Only HTMLElement instances support the "mouseover"
       // event, but you can remove the event in any event target.
@@ -25,15 +22,15 @@ export class IpeTooltip extends IpeFloatElement {
       // @ts-expect-error Same as above, but for "blur"
       this.unsubscribe(oldValue, 'blur', this.hideTooltip);
     }
-    if (newValue != null) {
+    if (this.anchor != null) {
       // @ts-expect-error Same as above, but for adding the "mouseover" event.
-      this.subscribe(newValue, 'mouseover', this.showTooltip);
+      this.subscribe(this.anchor, 'mouseover', this.showTooltip);
       // @ts-expect-error Same as above, but for adding the "mouseleave" event.
-      this.subscribe(newValue, 'mouseleave', this.hideTooltip);
+      this.subscribe(this.anchor, 'mouseleave', this.hideTooltip);
       // @ts-expect-error Same as above, but for adding the "focus" event.
-      this.subscribe(newValue, 'focus', this.showTooltip);
+      this.subscribe(this.anchor, 'focus', this.showTooltip);
       // @ts-expect-error Same as above, but for adding the "blur" event.
-      this.subscribe(newValue, 'blur', this.hideTooltip);
+      this.subscribe(this.anchor, 'blur', this.hideTooltip);
     }
   }
 }

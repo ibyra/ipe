@@ -31,9 +31,37 @@
         <u id="tooltip-www">WWW</u>.
       </p>
       <ipe-tooltip anchor="tooltip-html" inline placement="bottom">
+        <template shadowrootmode="open">
+          <style>
+            :host {
+              display: none;
+              margin: 0;
+              max-width: 256px;
+              overflow: hidden;
+            }
+            :host(:popover-open) {
+              display: unset;
+            }
+          </style>
+          <slot></slot>
+        </template>
         HyperText Markup Language
       </ipe-tooltip>
       <ipe-tooltip anchor="tooltip-www" inline placement="bottom">
+        <template shadowrootmode="open">
+          <style>
+            :host {
+              display: none;
+              margin: 0;
+              max-width: 256px;
+              overflow: hidden;
+            }
+            :host(:popover-open) {
+              display: unset;
+            }
+          </style>
+          <slot></slot>
+        </template>
         World Wide Web
       </ipe-tooltip>
     </main>

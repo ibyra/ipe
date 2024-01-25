@@ -1,5 +1,8 @@
+import { css, type PropertyDeclarations, type PropertyValues } from 'lit';
 import { isEqual, unique } from 'moderndash';
 import {
+  type HTMLOptlist,
+  type HTMLValueOption,
   asInt,
   getFirstOption,
   getLastOption,
@@ -8,175 +11,103 @@ import {
   isHTMLValueOption,
   nextOptionOf,
   previousOptionOf,
+  BoolAttributeConverter,
+  IntAttributeConverter,
 } from './commons';
-import { type HTMLOptlist, type HTMLValueOption } from './dom';
 import {
   type FormValidity,
   IpeElementFormSingleValue,
 } from './ipe-element-form';
-import {
-  FormProperty,
-  Property,
-  attributeParsers,
-  formDataParsers,
-} from './property';
 
 // TODO: Add support to option group element
 
 // TODO: Add "shift+click" to support range selection
 
-// TODO: Store/restore values on form state
-
 export class IpeOptlistElement
   extends IpeElementFormSingleValue
   implements HTMLOptlist<HTMLValueOption>
 {
-  protected _options = new Property(this, {
-    name: 'options',
-    value: [] as ReadonlyArray<HTMLValueOption>,
-    equals: isEqual,
-  });
+  static override properties: PropertyDeclarations = {
+    multiple: {
+      reflect: true,
+      attribute: 'multiple',
+      converter: new BoolAttributeConverter(),
+    },
+    minLength: {
+      reflect: true,
+      attribute: 'minlength',
+      converter: new IntAttributeConverter(0),
+    },
+    maxLength: {
+      reflect: true,
+      attribute: 'maxlength',
+      converter: new IntAttributeConverter(Number.MAX_SAFE_INTEGER),
+    },
+    activeElement: {
+      attribute: false,
+    },
+  };
 
-  protected _activeElement = new Property(this, {
-    name: 'activeElement',
-    value: null as HTMLValueOption | null,
-  });
-
-  protected _multiple = new FormProperty(this, {
-    name: 'multiple',
-    value: false,
-    cast: Boolean,
-    attribute: attributeParsers.bool,
-    form: formDataParsers.bool,
-  });
-
-  protected _minLength = new FormProperty(this, {
-    name: 'minlength',
-    value: 0,
-    cast: asInt,
-    attribute: attributeParsers.int,
-    form: formDataParsers.int,
-  });
-
-  protected _maxLength = new FormProperty(this, {
-    name: 'maxlength',
-    value: Number.MAX_SAFE_INTEGER,
-    cast: asInt,
-    attribute: attributeParsers.int,
-    form: formDataParsers.int,
-  });
-
-  protected override get template(): string {
-    return `
-      <style>
-        :host {
-          display: block;
-        }
-        ::slotted([active]) {
-          background-color: rgba(255, 255, 255, 0.1);
-        }
-        ::slotted([selected]) {
-          background-color: rgba(255, 255, 255, 0.2);
-        }
-        ::slotted([active][selected]) {
-          background-color: rgba(255, 255, 255, 0.3);
-        }
-      </style>
-      <slot></slot>
-    `;
-  }
-
-  get activeElement(): HTMLValueOption | null {
-    return this._activeElement.value;
-  }
-
-  get value(): string {
-    const values = this.getOptionsValues();
-    return values[0] ?? '';
-  }
-  set value(value: string) {
-    const option = this._options.value.find((o) => o.value === value);
-    if (option == null) return;
-    this.selectOption(option);
-  }
-
-  get values(): Array<string> {
-    const values = this.getOptionsValues();
-    return values;
-  }
-  set values(value: Array<string>) {
-    const options = this._options.value.filter((o) => value.includes(o.value));
-    for (const option of options) {
-      this.selectOption(option);
+  static override styles = css`
+    :host {
+      display: block;
     }
-  }
+    slot::slotted() {
+      border: none;
+    }
+    slot::slotted([active]) {
+      background-color: rgba(255, 255, 255, 0.1);
+    }
+    slot::slotted([selected]) {
+      background-color: rgba(255, 255, 255, 0.2);
+    }
+    slot::slotted([active][selected]) {
+      background-color: rgba(255, 255, 255, 0.3);
+    }
+  `;
 
-  get multiple(): boolean {
-    return this._multiple.value;
-  }
-  set multiple(value: boolean) {
-    this._multiple.value = value;
-  }
+  static override content = `
+    <slot></slot>
+  `;
 
-  get minLength(): number {
-    return this._minLength.value;
-  }
-  set minLength(value: number) {
-    this._minLength.value = value;
-  }
+  public declare multiple: boolean;
+  public declare minLength: number;
+  public declare maxLength: number;
+  public declare activeElement: HTMLValueOption | null;
 
-  get maxLength(): number {
-    return this._maxLength.value;
-  }
-  set maxLength(value: number) {
-    this._maxLength.value = value;
+  protected declare _defaultMultiple: boolean;
+  protected declare _defaultMinLength: number;
+  protected declare _defaultMaxLength: number;
+  protected declare _restoredValues: ReadonlyArray<string>;
+  protected declare _options: ReadonlyArray<HTMLValueOption>;
+
+  constructor() {
+    super();
+    this.multiple = false;
+    this.minLength = 0;
+    this.maxLength = Number.MAX_SAFE_INTEGER;
+    this.activeElement = null;
+    this._defaultMultiple = false;
+    this._defaultMinLength = 0;
+    this._defaultMaxLength = Number.MAX_SAFE_INTEGER;
+    this._restoredValues = [];
+    this._options = [];
   }
 
   get options(): Array<HTMLValueOption> {
-    return Array.from(this._options.value);
+    return Array.from(this._options);
   }
 
   get selectedOption(): HTMLValueOption | null {
-    return getFirstOption(getSelectedOptions(this._options.value));
+    return getFirstOption(this.selectedOptions);
   }
 
   get selectedOptions(): Array<HTMLValueOption> {
-    return getSelectedOptions(this._options.value);
-  }
-
-  override get formValidity(): FormValidity {
-    const { flags, messages } = super.formValidity;
-
-    const values = this.getOptionsValues();
-
-    messages.valueMissing = this.dataset['valueMissing'] ?? 'Required';
-    flags.valueMissing = this._required.value && values.length === 0;
-
-    messages.tooShort = this.dataset['tooShort'] ?? 'Select more options';
-    flags.tooShort =
-      this._multiple.value && this._minLength.value > values.length;
-
-    messages.tooLong = this.dataset['tooLong'] ?? 'Select less options';
-    flags.tooLong =
-      (this._multiple.value && this._maxLength.value < values.length) ||
-      (!this._multiple.value && values.length > 1);
-
-    return { flags, messages };
-  }
-
-  override get formValue(): FormData | null {
-    const values = this.getOptionsValues();
-    if (values.length === 0) return null;
-    const name = this.name;
-    const formdata = new FormData();
-    for (const value of values) {
-      formdata.append(name, value);
-    }
-    return formdata;
+    return getSelectedOptions(this._options);
   }
 
   toggle(option: HTMLValueOption): void {
-    if (!this._options.value.includes(option)) {
+    if (!this._options.includes(option)) {
       throw new TypeError('Option is not owned by this select.');
     }
     if (option.selected) {
@@ -187,177 +118,270 @@ export class IpeOptlistElement
   }
 
   select(option: HTMLValueOption): void {
-    if (!this._options.value.includes(option)) {
+    if (!this._options.includes(option)) {
       throw new TypeError('Option is not owned by this select.');
     }
     this.selectOption(option);
   }
 
   deselect(option: HTMLValueOption): void {
-    if (!this._options.value.includes(option)) {
+    if (!this._options.includes(option)) {
       throw new TypeError('Option is not owned by this select.');
     }
     this.deselectOption(option);
   }
 
   first(): HTMLValueOption | null {
-    return getFirstOption(this._options.value);
+    return getFirstOption(this._options);
   }
 
   last(): HTMLValueOption | null {
-    return getLastOption(this._options.value);
+    return getLastOption(this._options);
   }
 
   next(): HTMLValueOption | null {
     const activeElement =
-      this._options.value.find((o) => o === document.activeElement) ??
-      getFirstOption(getSelectedOptions(this._options.value)) ??
-      getFirstOption(this._options.value);
+      this._options.find((o) => o === document.activeElement) ??
+      this.selectedOption ??
+      this.first();
     if (activeElement == null) return null;
-    return nextOptionOf(this._options.value, activeElement);
+    return nextOptionOf(this._options, activeElement);
   }
 
   previous(): HTMLValueOption | null {
     const activeElement =
-      this._options.value.find((o) => o === document.activeElement) ??
-      getFirstOption(getSelectedOptions(this._options.value)) ??
-      getFirstOption(this._options.value);
+      this._options.find((o) => o === document.activeElement) ??
+      this.selectedOption ??
+      this.first();
     if (activeElement == null) return null;
-    return previousOptionOf(this._options.value, activeElement);
-  }
-
-  override saveForm(): void {
-    const values = this.getOptionsValues();
-    this.formState.set('values', values);
-    super.saveForm();
+    return previousOptionOf(this._options, activeElement);
   }
 
   override connectedCallback(): void {
     super.connectedCallback();
+
+    this._defaultMultiple = this.multiple;
+    this._defaultMinLength = this.minLength;
+    this._defaultMaxLength = this.maxLength;
+
+    this.addEventListener('focus', this.handleFocus);
     this.addEventListener('blur', this.handleBlur);
     this.addEventListener('keydown', this.handleKeydown);
+    this.updateOptions();
+
+    if (!this.hasAttribute('tabindex')) {
+      this.tabIndex = 0;
+    }
+
+    const content = this.contentSlot;
+    if (content != null) {
+      this.subscribe(content, 'slotchange', this.handleSlotChange);
+    }
   }
 
   override disconnectedCallback(): void {
     super.disconnectedCallback();
-    this._options.value = [];
+    this.removeEventListener('focus', this.handleFocus);
     this.removeEventListener('blur', this.handleBlur);
     this.removeEventListener('keydown', this.handleKeydown);
+    this.updateOptions();
+    const content = this.contentSlot;
+    if (content == null) return;
+    this.unsubscribe(content, 'slotchange', this.handleSlotChange);
   }
 
-  override formResetCallback(): void {
-    super.formResetCallback();
-    for (const option of this._options.value) {
-      option.selected = option.defaultSelected;
+  protected get contentSlot(): HTMLSlotElement | null {
+    const slot = this.getSlot();
+    return slot;
+  }
+
+  protected override get _formProps(): Array<keyof this> {
+    return [...super._formProps, 'multiple', 'minLength', 'maxLength'];
+  }
+
+  protected override get _formValidity(): FormValidity {
+    const formValidity = super._formValidity;
+
+    const values = this.getOptionsValues();
+
+    formValidity.messages.valueMissing =
+      this.dataset['valueMissing'] ?? 'Required';
+    formValidity.flags.valueMissing = this.required && values.length === 0;
+
+    formValidity.messages.tooShort =
+      this.dataset['tooShort'] ?? 'Select more options';
+    formValidity.flags.tooShort =
+      this.multiple && this.minLength > values.length;
+
+    formValidity.messages.tooLong =
+      this.dataset['tooLong'] ?? 'Select less options';
+    formValidity.flags.tooLong =
+      (this.multiple && this.maxLength < values.length) ||
+      (!this.multiple && values.length > 1);
+
+    return formValidity;
+  }
+
+  protected override get _formValue(): FormData | null {
+    const values = this.getOptionsValues();
+    if (values.length === 0) return null;
+    const name = this.name;
+    const formdata = new FormData();
+    for (const value of values) {
+      formdata.append(name, value);
+    }
+    return formdata;
+  }
+
+  protected override resetForm(): void {
+    super.resetForm();
+    this.multiple = this._defaultMultiple;
+    this.minLength = this._defaultMinLength;
+    this.maxLength = this._defaultMaxLength;
+    for (const option of this._options) {
+      option.reset();
     }
   }
 
-  override assignSlots(): void {
-    super.assignSlots();
-    const options = this.assignedOptions();
-    this._options.value = options;
+  protected override restoreForm(state: FormData): void {
+    super.restoreForm(state);
+    if (state.has('multiple')) {
+      const entry = state.get('multiple')!;
+      this.multiple = entry === 'true';
+    }
+    if (state.has('minLength')) {
+      const entry = state.get('minLength')!;
+      this.minLength = asInt(Number.parseFloat(String(entry)));
+    }
+    if (state.has('maxLength')) {
+      const entry = state.get('maxLength')!;
+      this.maxLength = asInt(Number.parseFloat(String(entry)));
+    }
+    if (state.has('values')) {
+      const entries = state.getAll('values')!;
+      const values = Array.from(entries, String);
+      this._restoredValues = values;
+      for (const option of this._options) {
+        option.selected = values.includes(option.value);
+      }
+    }
   }
 
-  override propertyChanged(
-    name: string | symbol,
-    oldValue: unknown,
-    newValue: unknown,
-  ): void {
-    if (name === this._activeElement.name) {
-      const curr = newValue as HTMLValueOption | null;
-      const prev = oldValue as HTMLValueOption | null;
-      return this.activeElementChanged(curr, prev);
+  protected override saveForm(): void {
+    const values = this.getOptionsValues();
+    this._formState.delete('values');
+    for (const value of values) {
+      this._formState.append('values', value);
     }
-    if (name === this._options.name) {
-      const curr = newValue as ReadonlyArray<HTMLValueOption>;
-      const prev = oldValue as ReadonlyArray<HTMLValueOption>;
-      return this.optionsChanged(curr, prev);
-    }
-    if (name === this._multiple.name) {
-      const curr = newValue as boolean;
-      return this.multipleChanged(curr);
-    }
-    return super.propertyChanged(name, oldValue, newValue);
+    super.saveForm();
   }
 
-  protected override disabledChanged(newValue: boolean): void {
-    super.disabledChanged(newValue);
-    this.inert = newValue;
+  protected override updated(props: PropertyValues<this>): void {
+    if (props.has('multiple')) this.multipleUpdated();
+    if (props.has('minLength')) this.minLengthUpdated();
+    if (props.has('maxLength')) this.maxLengthUpdated();
+    if (props.has('activeElement')) {
+      const oldValue = props.get('activeElement')!;
+      this.activeElementUpdated(oldValue);
+    }
+    return super.updated(props);
   }
 
-  protected activeElementChanged(
-    newValue: HTMLValueOption | null,
-    oldValue: HTMLValueOption | null,
-  ): void {
+  protected override disabledUpdated(): void {
+    super.disabledUpdated();
+    this.inert = this.disabled;
+  }
+
+  protected multipleUpdated(): void {
+    const multiple = this.multiple ? 'true' : 'false';
+    this._formState.set('multiple', multiple);
+    this._internals.ariaMultiSelectable = multiple;
+    this.ariaMultiSelectable = multiple;
+  }
+
+  protected minLengthUpdated(): void {
+    const minLength = this.minLength.toString(10);
+    this._formState.set('minLength', minLength);
+  }
+
+  protected maxLengthUpdated(): void {
+    const minLength = this.minLength.toString(10);
+    this._formState.set('minLength', minLength);
+  }
+
+  protected activeElementUpdated(oldValue: HTMLValueOption | null): void {
     if (oldValue != null) {
       oldValue.removeAttribute('active');
     }
-    if (newValue != null) {
-      newValue.toggleAttribute('active', true);
+    if (this.activeElement != null) {
+      this.activeElement.toggleAttribute('active', true);
     }
-    if (newValue == null || newValue.id === '') {
+    if (this.activeElement == null || this.activeElement.id === '') {
       this.removeAttribute('aria-activedescendant');
     } else {
-      this.setAttribute('aria-activedescendant', newValue.id);
+      this.setAttribute('aria-activedescendant', this.activeElement.id);
     }
   }
 
-  protected optionsChanged(
-    newValue: ReadonlyArray<HTMLValueOption>,
-    oldValue: ReadonlyArray<HTMLValueOption>,
-  ): void {
+  protected optionsUpdated(oldValue: ReadonlyArray<HTMLValueOption>): void {
     for (const option of oldValue) {
-      this.unsubscribe(option, 'change', this.handleOptionChange);
+      this.unsubscribe(option, 'mouseenter', this.handleOptionMouseenter);
       this.unsubscribe(option, 'click', this.handleOptionClick);
       this.unsubscribe(option, 'beforetoggle', this.handleOptionBeforeToggle);
       this.unsubscribe(option, 'toggle', this.handleOptionToggle);
+      this.unsubscribe(option, 'change', this.handleOptionChange);
     }
 
-    for (const option of newValue) {
-      this.subscribe(option, 'change', this.handleOptionChange);
+    for (const option of this._options) {
+      this.subscribe(option, 'mouseenter', this.handleOptionMouseenter);
       this.subscribe(option, 'click', this.handleOptionClick);
       this.subscribe(option, 'beforetoggle', this.handleOptionBeforeToggle);
       this.subscribe(option, 'toggle', this.handleOptionToggle);
+      this.subscribe(option, 'change', this.handleOptionChange);
+    }
+
+    if (this._restoredValues.length > 0) {
+      for (const option of this._options) {
+        option.selected = this._restoredValues.includes(option.value);
+      }
+      this._restoredValues = [];
     }
 
     this.saveForm();
   }
 
-  protected valuesChanged(newValue: ReadonlyArray<string>): void {
-    for (const option of this._options.value) {
-      option.selected = newValue.includes(option.value);
-    }
-  }
+  protected async updateOptions(): Promise<void> {
+    const elements = await this.getDefinedAssignedElements();
+    const newValue = elements.filter(isHTMLValueOption);
+    const oldValue = this._options;
+    if (isEqual(oldValue, newValue)) return;
 
-  protected multipleChanged(newValue: boolean): void {
-    this.ariaMultiSelectable = newValue ? 'true' : 'false';
-    this._internals.ariaMultiSelectable = newValue ? 'true' : 'false';
+    this._options = newValue;
+    this.optionsUpdated(oldValue);
   }
 
   protected getOptionsValues(): Array<string> {
-    const selected = getSelectedOptions(this._options.value);
-    const values = unique(getOptionsValues(selected));
+    const values = unique(getOptionsValues(this.selectedOptions));
     return values;
   }
 
   protected canSelect(): boolean {
-    return !this._readOnly.value;
+    return !this.readOnly;
   }
 
   protected canDeselect(): boolean {
     if (this.readOnly) return false;
-    if (!this._required.value) return true;
-    const selected = getSelectedOptions(this._options.value);
-    return selected.length > 1;
+    if (!this.required) return true;
+    return this.selectedOptions.length > 1;
   }
 
   protected selectOption(option: HTMLValueOption): void {
-    if (!this._multiple.value) {
-      for (const other of this._options.value) {
+    if (!this.multiple) {
+      for (const other of this._options) {
         other.selected = other.value === option.value;
       }
     } else {
-      for (const other of this._options.value) {
+      for (const other of this._options) {
         if (other.value !== option.value) continue;
         other.selected = true;
       }
@@ -366,7 +390,7 @@ export class IpeOptlistElement
   }
 
   protected deselectOption(option: HTMLValueOption): void {
-    for (const other of this._options.value) {
+    for (const other of this._options) {
       if (other.value !== option.value) continue;
       other.selected = false;
     }
@@ -385,25 +409,18 @@ export class IpeOptlistElement
     this.notifyChange();
   }
 
-  protected assignedOptions(): Array<HTMLValueOption> {
-    const slot = this.getShadowRootSlot();
-    if (slot == null) return [];
-    const elements = slot.assignedElements();
-    const notDefined = elements.filter((e) => e.matches(':not(:defined)'));
-    const localNames = new Set(Array.from(notDefined, (e) => e.localName));
-    for (const localName of localNames) {
-      window.customElements
-        .whenDefined(localName)
-        .then(() => this.assignSlots())
-        .catch(console.error);
-    }
-    const options = elements.filter(isHTMLValueOption);
-    return options;
+  protected handleSlotChange(): void {
+    this.updateOptions();
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  protected handleFocus(_event: FocusEvent): void {
+    this.activeElement = this.selectedOption ?? this.first();
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   protected handleBlur(_event: FocusEvent): void {
-    this._activeElement.value = null;
+    this.activeElement = null;
   }
 
   protected handleKeydown(event: KeyboardEvent): void {
@@ -415,15 +432,13 @@ export class IpeOptlistElement
 
     // Prevent scroll when focusing on accordion item
     event.preventDefault();
-    if (this._activeElement.value == null) {
-      this._activeElement.value =
-        getFirstOption(getSelectedOptions(this._options.value)) ??
-        getFirstOption(this._options.value);
+    if (this.activeElement == null) {
+      this.activeElement = this.selectedOption ?? this.first();
       return;
     }
 
     if (event.key === 'Enter' || event.key === ' ') {
-      const option = this._activeElement.value;
+      const option = this.activeElement;
       const selected = !option.selected;
       if (selected) {
         if (!this.canSelect()) return;
@@ -436,50 +451,53 @@ export class IpeOptlistElement
     }
 
     if (event.key === 'ArrowDown') {
-      this._activeElement.value = nextOptionOf(
-        this._options.value,
-        this._activeElement.value,
-      );
+      this.activeElement = nextOptionOf(this._options, this.activeElement);
       return;
     }
 
     if (event.key === 'ArrowUp') {
-      this._activeElement.value = previousOptionOf(
-        this._options.value,
-        this._activeElement.value,
-      );
+      this.activeElement = previousOptionOf(this._options, this.activeElement);
       return;
     }
 
     if (event.key === 'Home') {
-      this._activeElement.value = getFirstOption(this._options.value);
+      this.activeElement = this.first();
       return;
     }
 
     if (event.key === 'End') {
-      this._activeElement.value = getLastOption(this._options.value);
+      this.activeElement = this.last();
       return;
     }
   }
 
-  protected handleOptionChange(): void {
+  protected handleOptionChange(event: Event): void {
+    event.stopPropagation();
     this.saveForm();
+  }
+
+  protected handleOptionMouseenter(event: MouseEvent): void {
+    if (this.ownerDocument.activeElement !== this) return;
+    const option = this._options.find((o) => o === event.target);
+    if (option == null) return;
+    if (option.disabled) return;
+    this.activeElement = option;
   }
 
   protected handleOptionClick(event: MouseEvent): void {
     this._userInteracted = true;
-    const option = this._options.value.find((o) => o === event.target);
+    const option = this._options.find((option) => option === event.target);
     if (option == null) return;
 
     event.preventDefault();
-    this._activeElement.value = option;
+    this.activeElement = option;
   }
 
   protected handleOptionBeforeToggle(event: ToggleEvent): void {
     const newState = event.newState;
     if (newState !== 'selected' && newState !== 'unselected') return;
 
-    const option = this._options.value.find((o) => o === event.target);
+    const option = this._options.find((option) => option === event.target);
     if (option == null) return;
 
     this._userInteracted = true;
@@ -492,7 +510,7 @@ export class IpeOptlistElement
     const newState = event.newState;
     if (newState !== 'selected' && newState !== 'unselected') return;
 
-    const option = this._options.value.find((o) => o === event.target);
+    const option = this._options.find((option) => option === event.target);
     if (option == null) return;
 
     this._userInteracted = true;
@@ -502,11 +520,6 @@ export class IpeOptlistElement
     }
 
     this.deselectNotifyOption(option);
-    return;
-  }
-
-  public static override get observedAttributes(): Array<string> {
-    return [...super.observedAttributes, 'minlength', 'maxlength'];
   }
 }
 

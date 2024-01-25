@@ -18,23 +18,7 @@
     <main>
       <h1><code>ipe-disclosure</code> demo</h1>
       <ipe-disclosure id="disclosure">
-        <template shadowrootmode="open">
-          <style>
-            :host {
-              display: block;
-              overflow: hidden;
-            }
-            :host #content {
-              display: none;
-            }
-            :host([open]) #content {
-              display: unset;
-            }
-          </style>
-          <slot id="summary" name="summary" part="summary"></slot>
-          <slot id="content" part="content"></slot>
-        </template>
-        <button slot="summary">Summary</button>
+        <input type="button" slot="summary" value="Summary" />
         <p>
           Lorem ipsum dolor sit amet consectetur adipisicing elit. Recusandae
           labore similique velit veniam et ullam eius voluptate voluptas

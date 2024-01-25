@@ -8,123 +8,89 @@ import {
   offset as offsetMiddleware,
   shift as shiftMiddleware,
 } from '@floating-ui/dom';
-import { asInt, asPlacement } from './commons';
-import { type HTMLOpenable, type Placement } from './dom';
+import { css, type PropertyDeclarations, type PropertyValues } from 'lit';
+import {
+  type HTMLOpenable,
+  type Placement,
+  BoolAttributeConverter,
+  IdRefAttributeConverter,
+  IntAttributeConverter,
+  PlacementAttributeConverter,
+} from './commons';
 import { IpeElement } from './ipe-element';
-import { Property, attributeParsers } from './property';
 
 // TODO: Observe changes on anchor ID to update the float element;
 
 export class IpeFloatElement extends IpeElement implements HTMLOpenable {
-  protected _open = new Property(this, {
-    name: 'open',
-    value: false,
-    cast: Boolean,
-    attribute: attributeParsers.bool,
-  });
+  static override properties: PropertyDeclarations = {
+    open: {
+      reflect: true,
+      attribute: 'open',
+      converter: new BoolAttributeConverter(),
+    },
+    inline: {
+      reflect: true,
+      attribute: 'inline',
+      converter: new BoolAttributeConverter(),
+    },
+    offset: {
+      reflect: true,
+      attribute: 'offset',
+      converter: new IntAttributeConverter(0),
+    },
+    shift: {
+      reflect: true,
+      attribute: 'shift',
+      converter: new IntAttributeConverter(0),
+    },
+    placement: {
+      reflect: true,
+      attribute: 'placement',
+      converter: new PlacementAttributeConverter(),
+    },
+    anchor: {
+      reflect: true,
+      attribute: 'anchor',
+      converter: new IdRefAttributeConverter(document),
+    },
+  };
 
-  protected _inline = new Property(this, {
-    name: 'inline',
-    value: false,
-    cast: Boolean,
-    attribute: attributeParsers.bool,
-  });
+  static override styles = css`
+    :host {
+      display: none;
+      margin: 0;
+      max-width: 256px;
+      overflow: hidden;
+    }
+    :host(:popover-open) {
+      display: unset;
+    }
+  `;
 
-  protected _offset = new Property(this, {
-    name: 'offset',
-    value: 0,
-    cast: asInt,
-    attribute: attributeParsers.int,
-  });
+  static override content = `
+    <slot></slot>
+  `;
 
-  protected _shift = new Property(this, {
-    name: 'shift',
-    value: 0,
-    cast: asInt,
-    attribute: attributeParsers.int,
-  });
+  public declare open: boolean;
+  public declare inline: boolean;
+  public declare offset: number;
+  public declare shift: number;
+  public declare placement: Placement;
+  public declare anchor: Element | null;
 
-  protected _placement = new Property(this, {
-    name: 'placement',
-    value: 'auto' as Placement,
-    cast: asPlacement,
-    attribute: attributeParsers.placement,
-  });
+  protected declare _updateTimerID: number | null;
+  protected declare _updateCleanup: (() => void) | null;
 
-  protected _anchor = new Property(this, {
-    name: 'anchor',
-    value: null as Element | null,
-    attribute: attributeParsers.refId,
-  });
-
-  protected _updateTimerID: number | null = null;
-
-  protected _updateCleanup: (() => void) | null = null;
-
-  protected override get template(): string | null {
-    return `
-      <style>
-        :host {
-          display: none;
-          margin: 0;
-          max-width: 256px;
-          overflow: hidden;
-        }
-        :host(:popover-open) {
-          display: unset;
-        }
-      </style>
-      <slot></slot>
-    `;
-  }
-
-  get open(): boolean {
-    return this._open.value;
-  }
-  set open(value: boolean) {
-    this._open.value = value;
-    this.updatePosition();
-  }
-
-  get anchor(): Element | null {
-    return this._anchor.value;
-  }
-  set anchor(value: Element | null) {
-    if (value != null && !(value instanceof Element)) return;
-    this._anchor.value = value;
-    this.updatePosition();
-  }
-
-  get inline(): boolean {
-    return this._inline.value;
-  }
-  set inline(value: boolean) {
-    this._inline.value = value;
-    this.updatePosition();
-  }
-
-  get offset(): number {
-    return this._offset.value;
-  }
-  set offset(value: number) {
-    this._offset.value = value;
-    this.updatePosition();
-  }
-
-  get shift(): number {
-    return this._shift.value;
-  }
-  set shift(value: number) {
-    this._shift.value = value;
-    this.updatePosition();
-  }
-
-  get placement(): Placement {
-    return this._placement.value;
-  }
-  set placement(value: Placement) {
-    this._placement.value = value;
-    this.updatePosition();
+  constructor() {
+    super();
+    this.open = false;
+    this.inline = false;
+    this.offset = 0;
+    this.shift = 0;
+    this.placement = 'auto';
+    this.anchor = null;
+    this._updateTimerID = null;
+    this._updateCleanup = null;
   }
 
   override connectedCallback(): void {
@@ -133,59 +99,47 @@ export class IpeFloatElement extends IpeElement implements HTMLOpenable {
       this.popover = 'auto';
     }
     this.addEventListener('beforetoggle', this.handleBeforetoggle);
-    this.updatePosition();
   }
 
   override disconnectedCallback(): void {
     super.disconnectedCallback();
     this.removeEventListener('beforetoggle', this.handleBeforetoggle);
-    this.updatePosition();
   }
 
-  override propertyChanged(
-    name: string | symbol,
-    oldValue: unknown,
-    newValue: unknown,
-  ): void {
-    if (name === this._open.name) {
-      const curr = newValue as boolean;
-      return this.openChanged(curr);
-    }
-    if (name === this._anchor.name) {
-      const curr = newValue as Element | null;
-      const prev = oldValue as Element | null;
-      return this.anchorChanged(curr, prev);
-    }
-    if (
-      name === this._inline.name ||
-      name === this._offset.name ||
-      name === this._shift.name ||
-      name === this._placement.name
-    ) {
-      return this.updatePosition();
-    }
-    super.propertyChanged(name, oldValue, newValue);
+  protected get _positionProps(): Array<keyof this> {
+    return ['open', 'inline', 'offset', 'shift', 'placement', 'anchor'];
   }
 
-  protected openChanged(newValue: boolean): void {
-    if (this._anchor.value == null) return;
-    this._anchor.value.ariaExpanded = newValue ? 'true' : 'false';
-    this.updatePosition();
+  protected get contentSlot(): HTMLSlotElement | null {
+    const element = this.getSlot();
+    return element;
   }
 
-  protected anchorChanged(
-    newValue: Element | null,
-    oldValue: Element | null,
-  ): void {
+  protected override updated(props: PropertyValues<this>): void {
+    if (props.has('open')) this.openUpdated();
+    if (props.has('anchor')) this.anchorUpdated(props.get('anchor')!);
+    const positionPropNames = this._positionProps;
+    const changedPropNames = Array.from(props.keys());
+    if (positionPropNames.some((name) => changedPropNames.includes(name))) {
+      this.updatePosition();
+    }
+    return super.updated(props);
+  }
+
+  protected openUpdated(): void {
+    if (this.anchor == null) return;
+    this.anchor.ariaExpanded = this.open ? 'true' : 'false';
+  }
+
+  protected anchorUpdated(oldValue: Element | null): void {
     if (oldValue != null) {
       oldValue.ariaHasPopup = null;
       oldValue.ariaExpanded = null;
     }
-    if (newValue != null) {
-      newValue.ariaHasPopup = 'true';
-      newValue.ariaExpanded = this._open.value ? 'true' : 'false';
+    if (this.anchor != null) {
+      this.anchor.ariaHasPopup = 'true';
+      this.anchor.ariaExpanded = this.open ? 'true' : 'false';
     }
-    this.updatePosition();
   }
 
   protected updatePosition(): void {
@@ -193,29 +147,28 @@ export class IpeFloatElement extends IpeElement implements HTMLOpenable {
       this._updateCleanup();
       this._updateCleanup = null;
     }
-    if (!this._open.value || !this.isConnected) return;
+    if (!this.open || !this.isConnected) return;
 
-    const anchor =
-      this._anchor.value ?? this.ownerDocument.body.firstElementChild;
+    const anchor = this.anchor ?? this.ownerDocument.body.firstElementChild;
     if (anchor == null) return;
 
     const middleware: Array<Middleware> = [];
 
-    middleware.push(offsetMiddleware(this._offset.value));
+    middleware.push(offsetMiddleware(this.offset));
 
-    if (this._inline.value) {
+    if (this.inline) {
       middleware.push(inlineMiddleware());
     }
 
     let placement: Exclude<Placement, 'auto'> | undefined;
-    if (this._placement.value === 'auto') {
+    if (this.placement === 'auto') {
       middleware.push(autoPlacementMiddleware());
     } else {
-      placement = this._placement.value;
+      placement = this.placement;
       middleware.push(flipMiddleware());
     }
 
-    middleware.push(shiftMiddleware({ padding: this._shift.value }));
+    middleware.push(shiftMiddleware({ padding: this.shift }));
 
     const style = window.getComputedStyle(this);
 
@@ -230,24 +183,12 @@ export class IpeFloatElement extends IpeElement implements HTMLOpenable {
         })
         .catch((error) => console.error(error));
     };
+
     this._updateCleanup = autoUpdate(anchor, this, update);
   }
 
   protected handleBeforetoggle(event: ToggleEvent): void {
-    this._open.value = event.newState === 'open';
-    this.updatePosition();
-  }
-
-  static override get observedAttributes(): Array<string> {
-    return [
-      ...super.observedAttributes,
-      'open',
-      'anchor',
-      'inline',
-      'offset',
-      'shift',
-      'placement',
-    ];
+    this.open = event.newState === 'open';
   }
 }
 

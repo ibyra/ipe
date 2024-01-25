@@ -19,31 +19,7 @@
     <main>
       <h1><code>ipe-accordion</code> demo</h1>
       <ipe-accordion>
-        <template shadowrootmode="open">
-          <style>
-            :host {
-              display: block;
-            }
-          </style>
-          <slot></slot>
-        </template>
         <ipe-disclosure id="a" open>
-          <template shadowrootmode="open">
-            <style>
-              :host {
-                display: block;
-                overflow: hidden;
-              }
-              :host #content {
-                display: none;
-              }
-              :host([open]) #content {
-                display: unset;
-              }
-            </style>
-            <slot id="summary" name="summary" part="summary"></slot>
-            <slot id="content" part="content"></slot>
-          </template>
           <button slot="summary">Summary A</button>
           <p>
             Lorem ipsum dolor sit amet consectetur adipisicing elit. Recusandae
@@ -53,22 +29,6 @@
           </p>
         </ipe-disclosure>
         <ipe-disclosure id="b">
-          <template shadowrootmode="open">
-            <style>
-              :host {
-                display: block;
-                overflow: hidden;
-              }
-              :host #content {
-                display: none;
-              }
-              :host([open]) #content {
-                display: unset;
-              }
-            </style>
-            <slot id="summary" name="summary" part="summary"></slot>
-            <slot id="content" part="content"></slot>
-          </template>
           <button slot="summary">Summary B</button>
           <p>
             Eos deserunt labore maiores voluptatem, architecto pariatur!
@@ -77,22 +37,6 @@
           </p>
         </ipe-disclosure>
         <ipe-disclosure id="c">
-          <template shadowrootmode="open">
-            <style>
-              :host {
-                display: block;
-                overflow: hidden;
-              }
-              :host #content {
-                display: none;
-              }
-              :host([open]) #content {
-                display: unset;
-              }
-            </style>
-            <slot id="summary" name="summary" part="summary"></slot>
-            <slot id="content" part="content"></slot>
-          </template>
           <button slot="summary">Summary C</button>
           <p>
             Odit harum veniam illo totam enim impedit facilis perspiciatis,
