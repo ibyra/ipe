@@ -62,36 +62,59 @@ export class IpeComboboxElement
 
   static override styles = css`
     :host {
-      display: block;
-      position: relative;
       box-sizing: border-box;
+      position: relative;
+      display: block;
+      width: 100%;
+      height: 2.5em;
+      border: solid 0.125em dimgray;
+      background-color: white;
+      font-size: 1em;
+      line-height: 1;
       cursor: pointer;
     }
 
     #input {
       box-sizing: border-box;
+      position: absolute;
       display: block;
+      border: none;
+      top: 0;
+      left: 0;
+      height: 100%;
       width: 100%;
-      height: 2.5em;
-      border: solid 2px dimgray;
-      background-color: white;
+      padding: 0 0.5em;
+      background-color: transparent;
+      text-align: left;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      color: dimgray;
       cursor: pointer;
     }
 
     #picked {
+      box-sizing: border-box;
+      position: absolute;
       display: flex;
       flex-direction: row;
-      position: absolute;
-      box-sizing: border-box;
+      align-items: center;
       gap: 0.5em;
-      top: 50%;
-      left: 0.5em;
-      translate: 0 -50%;
+      border: none;
+      top: 0;
+      left: 0;
+      height: 100%;
+      width: 100%;
+      padding: 0 0.5em;
+      background-color: transparent;
+      text-align: left;
+      color: currentColor;
       pointer-events: none;
     }
     #picked::slotted(*) {
       display: none;
       border: 0;
+      font-size: 1em;
     }
     #picked::slotted([selected]) {
       display: unset;
@@ -101,7 +124,7 @@ export class IpeComboboxElement
       display: hidden;
       box-sizing: border-box;
       margin: 0;
-      border: solid 2px dimgray;
+      border: solid 0.125em dimgray;
       padding: 0;
       background-color: white;
     }
@@ -124,7 +147,7 @@ export class IpeComboboxElement
   `;
 
   static override content = `
-    <input id="input" part="input" type="button" popovertarget="popover" inert />
+    <input id="input" part="placeholder" type="button" popovertarget="popover" inert />
     <slot id="picked" name="picked" part="picked"></slot>
     <slot></slot>
     <slot id="popover" name="popover" part="popover" popover="auto"></slot>
@@ -199,6 +222,7 @@ export class IpeComboboxElement
         'beforetoggle',
         this.handlePopoverBeforetoggle,
       );
+      this.subscribe(popoverSlot, 'toggle', this.handlePopoverToggle);
     }
 
     const pickedSlot = this.pickedSlot;
@@ -225,6 +249,7 @@ export class IpeComboboxElement
         'beforetoggle',
         this.handlePopoverBeforetoggle,
       );
+      this.unsubscribe(popoverSlot, 'toggle', this.handlePopoverToggle);
     }
 
     const pickedSlot = this.pickedSlot;
@@ -255,6 +280,14 @@ export class IpeComboboxElement
 
   protected override get _formProps(): (keyof this)[] {
     return [...super._formProps, 'offset', 'shift', 'placement', 'placeholder'];
+  }
+
+  protected override saveForm(): void {
+    super.saveForm();
+    const inputElement = this.inputElement;
+    if (inputElement == null) return;
+    const selected = this.getOptionsValues();
+    inputElement.value = selected.length === 0 ? this.placeholder : '';
   }
 
   protected override resetForm(): void {
@@ -425,9 +458,6 @@ export class IpeComboboxElement
     const popoverSlot = this.popoverSlot;
     if (popoverSlot == null) return;
 
-    const inputElement = this.inputElement;
-    if (inputElement == null) return;
-
     const middleware: Array<Middleware> = [];
     middleware.push(offsetMiddleware(this.offset));
 
@@ -446,7 +476,7 @@ export class IpeComboboxElement
     const strategy = style.position === 'fixed' ? 'fixed' : 'absolute';
 
     const update = () => {
-      computePosition(inputElement, popoverSlot, {
+      computePosition(this, popoverSlot, {
         placement,
         middleware,
         strategy,
@@ -454,14 +484,14 @@ export class IpeComboboxElement
         .then((result) => {
           popoverSlot.style.left = `${result.x}px`;
           popoverSlot.style.top = `${result.y}px`;
-          const rect = inputElement.getBoundingClientRect();
+          const rect = this.getBoundingClientRect();
           popoverSlot.style.width = `${rect.width}px`;
           return result;
         })
         .catch((error) => console.error(error));
     };
 
-    this._updateCleanup = autoUpdate(inputElement, popoverSlot, update);
+    this._updateCleanup = autoUpdate(this, popoverSlot, update);
   }
 
   protected override handleSlotChange(): void {
@@ -686,6 +716,17 @@ export class IpeComboboxElement
   }
 
   protected handlePopoverBeforetoggle(event: ToggleEvent): void {
+    const beforeToggle = new ToggleEvent('beforetoggle', {
+      cancelable: true,
+      newState: event.newState,
+      oldState: event.oldState,
+    });
+    const proceed = this.dispatchEvent(beforeToggle);
+    if (!proceed) {
+      event.preventDefault();
+      return;
+    }
+
     this.open = event.newState === 'open';
     this.activeElement = this.selectedOption ?? this.first();
     if (event.newState === 'open') return;
@@ -696,6 +737,15 @@ export class IpeComboboxElement
     if (inputElement == null) return;
 
     inputElement.inert = true;
+  }
+
+  protected handlePopoverToggle(event: ToggleEvent): void {
+    const toggle = new ToggleEvent('toggle', {
+      cancelable: false,
+      newState: event.newState,
+      oldState: event.oldState,
+    });
+    this.dispatchEvent(toggle);
   }
 }
 
