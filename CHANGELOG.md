@@ -1,5 +1,11 @@
 # @ibyra/ipe
 
+## 0.0.4
+
+### Patch Changes
+
+- 71cbae6: Fix combobox bugs on placeholder
+
 ## 0.0.3
 
 ### Patch Changes
