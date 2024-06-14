@@ -1,5 +1,11 @@
 # @ibyra/ipe
 
+## 0.0.6
+
+### Patch Changes
+
+- 7e46f04: Fix declarative shadow dom precedence
+
 ## 0.0.5
 
 ### Patch Changes
