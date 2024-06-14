@@ -25,6 +25,11 @@
       <h1><code>ipe-accordion</code> demo</h1>
       <ipe-accordion multiple>
         <template shadowrootmode="open">
+          <style>
+            :host {
+              display: block;
+            }
+          </style>
           <slot></slot>
         </template>
         <ipe-disclosure id="a" open>
