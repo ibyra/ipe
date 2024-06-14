@@ -1,5 +1,4 @@
 import { css, type PropertyDeclarations, type PropertyValues } from 'lit';
-import { isEqual, unique } from 'moderndash';
 import {
   type HTMLOptlist,
   type HTMLValueOption,
@@ -11,9 +10,10 @@ import {
   isHTMLValueOption,
   nextOptionOf,
   previousOptionOf,
-  BoolAttributeConverter,
-  IntAttributeConverter,
+  html,
 } from './commons';
+import { BoolConverter, IntConverter } from './attributes';
+import { equals, unique } from './arrays';
 import {
   type FormValidity,
   IpeElementFormSingleValue,
@@ -31,17 +31,17 @@ export class IpeOptlistElement
     multiple: {
       reflect: true,
       attribute: 'multiple',
-      converter: new BoolAttributeConverter(),
+      converter: new BoolConverter(),
     },
     minLength: {
       reflect: true,
       attribute: 'minlength',
-      converter: new IntAttributeConverter(0),
+      converter: new IntConverter(0),
     },
     maxLength: {
       reflect: true,
       attribute: 'maxlength',
-      converter: new IntAttributeConverter(Number.MAX_SAFE_INTEGER),
+      converter: new IntConverter(Number.MAX_SAFE_INTEGER),
     },
     activeElement: {
       attribute: false,
@@ -66,9 +66,7 @@ export class IpeOptlistElement
     }
   `;
 
-  static override content = `
-    <slot></slot>
-  `;
+  static override template = html`<slot></slot>`;
 
   public declare multiple: boolean;
   public declare minLength: number;
@@ -92,6 +90,7 @@ export class IpeOptlistElement
     this._defaultMaxLength = Number.MAX_SAFE_INTEGER;
     this._restoredValues = [];
     this._options = [];
+    this._internals.role = 'grid';
   }
 
   get options(): Array<HTMLValueOption> {
@@ -108,7 +107,7 @@ export class IpeOptlistElement
 
   toggle(option: HTMLValueOption): void {
     if (!this._options.includes(option)) {
-      throw new TypeError('Option is not owned by this select.');
+      throw new TypeError('Option is not owned by this element.');
     }
     if (option.selected) {
       this.deselectOption(option);
@@ -119,14 +118,14 @@ export class IpeOptlistElement
 
   select(option: HTMLValueOption): void {
     if (!this._options.includes(option)) {
-      throw new TypeError('Option is not owned by this select.');
+      throw new TypeError('Option is not owned by this element.');
     }
     this.selectOption(option);
   }
 
   deselect(option: HTMLValueOption): void {
     if (!this._options.includes(option)) {
-      throw new TypeError('Option is not owned by this select.');
+      throw new TypeError('Option is not owned by this element.');
     }
     this.deselectOption(option);
   }
@@ -296,7 +295,6 @@ export class IpeOptlistElement
     const multiple = this.multiple ? 'true' : 'false';
     this._formState.set('multiple', multiple);
     this._internals.ariaMultiSelectable = multiple;
-    this.ariaMultiSelectable = multiple;
   }
 
   protected minLengthUpdated(): void {
@@ -354,7 +352,7 @@ export class IpeOptlistElement
     const elements = await this.getDefinedAssignedElements();
     const newValue = elements.filter(isHTMLValueOption);
     const oldValue = this._options;
-    if (isEqual(oldValue, newValue)) return;
+    if (equals(oldValue, newValue)) return;
 
     this._options = newValue;
     this.optionsUpdated(oldValue);

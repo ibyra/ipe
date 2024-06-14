@@ -1,9 +1,6 @@
 import type { PropertyDeclarations, PropertyValues } from 'lit';
-import {
-  type HTMLFormControl,
-  BoolAttributeConverter,
-  StringAttributeConverter,
-} from './commons';
+import type { HTMLFormControl } from './commons';
+import { BoolConverter, StrConverter } from './attributes';
 import { IpeElement } from './ipe-element';
 
 export type FormValidity = {
@@ -25,17 +22,17 @@ export abstract class IpeElementForm
     disabled: {
       reflect: true,
       attribute: 'disabled',
-      converter: new BoolAttributeConverter(),
+      converter: new BoolConverter(),
     },
     readOnly: {
       reflect: true,
       attribute: 'readonly',
-      converter: new BoolAttributeConverter(),
+      converter: new BoolConverter(),
     },
     required: {
       reflect: true,
       attribute: 'required',
-      converter: new BoolAttributeConverter(),
+      converter: new BoolConverter(),
     },
   };
 
@@ -99,7 +96,7 @@ export abstract class IpeElementForm
 
   setCustomValidity(message = ''): void {
     this._customError = message;
-    this.saveFormValidity();
+    this.saveForm();
   }
 
   override connectedCallback(): void {
@@ -140,8 +137,6 @@ export abstract class IpeElementForm
    */
   formResetCallback(): void {
     this._userInteracted = false;
-    this._internals.ariaInvalid = 'false';
-    this.ariaInvalid = 'false';
     this.resetForm();
     this.saveForm();
   }
@@ -233,18 +228,11 @@ export abstract class IpeElementForm
       this._internals.setFormValue(null, null);
       return;
     }
+
     const state = this._userInteracted ? this._formState : null;
     const value = this._formValue;
     this._internals.setFormValue(value, state);
-    this.saveFormValidity();
-  }
 
-  /**
-   * Stores the validity of the element in the form.
-   * @see {getFormValidity}
-   */
-  protected saveFormValidity(): void {
-    const { flags, messages, anchor } = this._formValidity;
     const keys: Array<keyof ValidityStateFlags> = [
       'customError',
       'valueMissing',
@@ -257,17 +245,34 @@ export abstract class IpeElementForm
       'tooShort',
       'badInput',
     ];
+    const { flags, messages, anchor } = this._formValidity;
     const key = keys.find((key) => key in flags && flags[key] === true);
+
     if (key == null) {
       this._internals.setValidity({}, '', anchor);
       this._internals.ariaInvalid = 'false';
-      this.ariaInvalid = 'false';
+      this._internals.states.delete('invalid');
+      this._internals.states.delete('user-invalid');
+      this._internals.states.add('valid');
+      if (this._userInteracted) {
+        this._internals.states.add('user-valid');
+      } else {
+        this._internals.states.delete('user-valid');
+      }
       return;
     }
+
     const message = messages[key] ?? 'Invalid';
     this._internals.setValidity(flags, message, anchor);
-    this._internals.ariaInvalid = this._userInteracted ? 'true' : 'false';
-    this.ariaInvalid = this._userInteracted ? 'true' : 'false';
+    this._internals.ariaInvalid = 'true';
+    this._internals.states.delete('valid');
+    this._internals.states.delete('user-valid');
+    this._internals.states.add('invalid');
+    if (this._userInteracted) {
+      this._internals.states.add('user-invalid');
+    } else {
+      this._internals.states.delete('user-invalid');
+    }
   }
 
   /**
@@ -310,26 +315,24 @@ export abstract class IpeElementForm
     const disabled = this.disabled ? 'true' : 'false';
     this._formState.set('disabled', disabled);
     this._internals.ariaDisabled = disabled;
-    this.ariaDisabled = disabled;
   }
 
   protected readOnlyUpdated(): void {
     const readOnly = this.readOnly ? 'true' : 'false';
     this._formState.set('readOnly', readOnly);
     this._internals.ariaReadOnly = readOnly;
-    this.ariaReadOnly = readOnly;
   }
 
   protected requiredUpdated(): void {
     const required = this.required ? 'true' : 'false';
     this._formState.set('required', required);
     this._internals.ariaRequired = required;
-    this.ariaRequired = required;
   }
 
   protected handleInvalid(): void {
     this._internals.ariaInvalid = 'true';
-    this.ariaInvalid = 'true';
+    this._internals.states.add('invalid');
+    this._internals.states.add('user-invalid');
   }
 }
 
@@ -343,12 +346,12 @@ export abstract class IpeElementFormSingleValue extends IpeElementForm {
     name: {
       reflect: true,
       attribute: 'name',
-      converter: new StringAttributeConverter(),
+      converter: new StrConverter(),
     },
     autocomplete: {
       reflect: true,
       attribute: 'autocomplete',
-      converter: new StringAttributeConverter(),
+      converter: new StrConverter(),
     },
   };
 

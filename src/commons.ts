@@ -2,13 +2,44 @@
 /// <reference lib="DOM" />
 /// <reference lib="DOM.Iterable" />
 
-import { notEqual, type ComplexAttributeConverter, type HasChanged } from 'lit';
-
 declare global {
   interface HTMLElementEventMap {
     toggle: ToggleEvent;
     beforetoggle: ToggleEvent;
   }
+  interface ElementInternals {
+    states: Pick<
+      Set<string>,
+      | 'size'
+      | 'add'
+      | 'clear'
+      | 'delete'
+      | 'entries'
+      | 'forEach'
+      | 'has'
+      | 'keys'
+      | 'values'
+    >;
+  }
+}
+
+export interface EqualityComparison<T = unknown> {
+  (value: T, old: T): boolean;
+}
+
+/**
+ * Creates a HTMLTemplateElement instance with contents equal to the string.
+ *
+ * @param strings The string parts of the template string
+ * @param values The substitution values
+ */
+export function html(
+  strings: TemplateStringsArray,
+  ...values: ReadonlyArray<unknown>
+): HTMLTemplateElement {
+  const template = document.createElement('template');
+  template.innerHTML = String.raw(strings, values);
+  return template;
 }
 
 export type HTMLButton = HTMLButtonElement | HTMLInputElement;
@@ -286,10 +317,15 @@ export function isFinite(value: unknown): value is number {
   return isNumber(value) && Number.isFinite(value);
 }
 
-export function asDecimal(value: unknown): number {
+/**
+ * Tries to parse the value as a decimal. Otherwise, returns the default value.
+ * @param value
+ * @param defaultValue
+ */
+export function asDecimal(value: unknown, defaultValue = 0): number {
   const decimal = Number(value);
-  if (Number.isNaN(decimal)) return 0;
-  if (!Number.isFinite(decimal)) return 0;
+  if (Number.isNaN(decimal)) return defaultValue;
+  if (!Number.isFinite(decimal)) return defaultValue;
   return decimal;
 }
 
@@ -301,10 +337,15 @@ export function isInteger(value: unknown): value is number {
   return isFinite(value) && Number.isInteger(value);
 }
 
-export function asInt(value: unknown): number {
+/**
+ * Tries to parse the value as a integer. Otherwise, returns the default value.
+ * @param value
+ * @param defaultValue
+ */
+export function asInt(value: unknown, defaultValue = 0): number {
   const int = Number(value);
-  if (Number.isNaN(int)) return 0;
-  if (!Number.isFinite(int)) return 0;
+  if (Number.isNaN(int)) return defaultValue;
+  if (!Number.isFinite(int)) return defaultValue;
   if (!Number.isInteger(int)) return Math.trunc(int);
   return int;
 }
@@ -545,17 +586,24 @@ export function isChecked(value: unknown): value is Checked {
   return value === 'true' || value === 'false' || value === 'mixed';
 }
 
-export function asChecked(value: unknown): Checked {
+export function asChecked(
+  value: unknown,
+  defaultValue: Checked = 'false',
+): Checked {
   if (isChecked(value)) return value;
-  return value ? 'true' : 'false';
+  if (isBoolean(value)) return `${value}`;
+  return defaultValue;
 }
 
 export function isAlignment(value: unknown): value is Alignment {
   return value === 'start' || value === 'end';
 }
 
-export function asAlignment(value: unknown): Alignment {
-  return isAlignment(value) ? value : 'start';
+export function asAlignment(
+  value: unknown,
+  defaultValue: Alignment = 'start',
+): Alignment {
+  return isAlignment(value) ? value : defaultValue;
 }
 
 export function isSide(value: unknown): value is Side {
@@ -567,8 +615,8 @@ export function isSide(value: unknown): value is Side {
   );
 }
 
-export function asSide(value: unknown): Side {
-  return isSide(value) ? value : 'top';
+export function asSide(value: unknown, defaultValue: Side = 'top'): Side {
+  return isSide(value) ? value : defaultValue;
 }
 
 export function isAlignedPlacement(value: unknown): value is AlignedPlacement {
@@ -584,194 +632,20 @@ export function isAlignedPlacement(value: unknown): value is AlignedPlacement {
   );
 }
 
-export function asAlignedPlacement(value: unknown): AlignedPlacement {
-  return isAlignedPlacement(value) ? value : 'top-start';
+export function asAlignedPlacement(
+  value: unknown,
+  defaultValue: AlignedPlacement = 'top-start',
+): AlignedPlacement {
+  return isAlignedPlacement(value) ? value : defaultValue;
 }
 
 export function isPlacement(value: unknown): value is Placement {
   return value === 'auto' || isSide(value) || isAlignedPlacement(value);
 }
 
-export function asPlacement(value: unknown): Placement {
-  return isPlacement(value) ? value : 'auto';
-}
-
-export type ZIterable<E> = E extends Iterable<unknown>[]
-  ? { [k in keyof E]: E[k] extends Iterable<infer T> ? T : E[k] }
-  : never;
-
-export function zip<E extends Iterable<unknown>[]>(
-  ...args: E
-): Iterable<[...ZIterable<E>, number]> {
-  return {
-    [Symbol.iterator]() {
-      const iterators = args.map((arg) => arg[Symbol.iterator]());
-      let i = 0;
-      return {
-        next() {
-          const results = iterators.map((iter) => iter.next());
-          if (results.some(({ done }) => done)) {
-            return { done: true, value: undefined };
-          } else {
-            const values = results.map(({ value }) => value) as ZIterable<E>;
-            return { done: false, value: [...values, i++] };
-          }
-        },
-      };
-    },
-  };
-}
-
-abstract class AttributeConverter<T> implements ComplexAttributeConverter<T> {
-  public readonly defaultValue: T;
-  public readonly notEqual: HasChanged;
-
-  constructor(defaultValue: T, hasChanged: HasChanged = notEqual) {
-    this.defaultValue = defaultValue;
-    this.notEqual = hasChanged;
-  }
-
-  abstract fromAttribute(value: string | null): T;
-
-  abstract toAttribute(value: T): string | null;
-}
-
-export class BoolAttributeConverter extends AttributeConverter<boolean> {
-  constructor() {
-    super(false);
-  }
-
-  override fromAttribute(value: string | null): boolean {
-    return value != null;
-  }
-
-  override toAttribute(value: boolean): string | null {
-    return value ? '' : null;
-  }
-}
-
-export class StringAttributeConverter extends AttributeConverter<string> {
-  constructor(defaultValue: string = '') {
-    super(String(defaultValue));
-  }
-
-  override fromAttribute(value: string | null): string {
-    return value == null ? this.defaultValue : value;
-  }
-
-  override toAttribute(value: string): string | null {
-    return this.notEqual(value, this.defaultValue) ? value : null;
-  }
-}
-
-export class IntAttributeConverter extends AttributeConverter<number> {
-  constructor(defaultValue: number = 0) {
-    super(asInt(defaultValue));
-  }
-
-  override fromAttribute(value: string | null): number {
-    if (value == null) return this.defaultValue;
-    const numeric = Number.parseFloat(value);
-    return asInt(numeric);
-  }
-
-  override toAttribute(value: number): string | null {
-    const integer = asInt(value);
-    if (!this.notEqual(this.defaultValue, integer)) return null;
-    return integer.toString(10);
-  }
-}
-
-export class DecimalAttributeConverter extends AttributeConverter<number> {
-  constructor(defaultValue: number = 0.0) {
-    super(asDecimal(defaultValue));
-  }
-
-  override fromAttribute(value: string | null): number {
-    if (value == null) return this.defaultValue;
-    const numeric = Number.parseFloat(value);
-    return asDecimal(numeric);
-  }
-
-  override toAttribute(value: number): string | null {
-    const decimal = asDecimal(value);
-    if (!this.notEqual(this.defaultValue, decimal)) return null;
-    return decimal.toString(10);
-  }
-}
-
-export class NumberAttributeConverter extends AttributeConverter<number> {
-  constructor(defaultValue: number = 0.0) {
-    super(Number(defaultValue));
-  }
-
-  override fromAttribute(value: string | null): number {
-    if (value == null) return this.defaultValue;
-    const numeric = Number.parseFloat(value);
-    return numeric;
-  }
-
-  override toAttribute(value: number): string | null {
-    const number = Number(value);
-    if (!this.notEqual(this.defaultValue, number)) return null;
-    return number.toString(10);
-  }
-}
-
-export class CheckedAttributeConverter extends AttributeConverter<Checked> {
-  constructor(defaultValue: Checked = 'false') {
-    super(defaultValue);
-  }
-
-  override fromAttribute(value: string | null): Checked {
-    if (value == null) return this.defaultValue;
-    return asChecked(value);
-  }
-
-  override toAttribute(value: Checked): string | null {
-    const checked = asChecked(value);
-    if (!this.notEqual(this.defaultValue, checked)) return null;
-    return checked;
-  }
-}
-
-export class PlacementAttributeConverter extends AttributeConverter<Placement> {
-  constructor(defaultValue: Placement = 'auto') {
-    super(defaultValue);
-  }
-
-  override fromAttribute(value: string | null): Placement {
-    if (value == null) return this.defaultValue;
-    return asPlacement(value);
-  }
-
-  override toAttribute(value: Placement): string | null {
-    const checked = asPlacement(value);
-    if (!this.notEqual(this.defaultValue, checked)) return null;
-    return checked;
-  }
-}
-
-export class IdRefAttributeConverter<
-  E extends Element = Element,
-> extends AttributeConverter<E | null> {
-  public document: Document;
-
-  constructor(document: Document) {
-    super(null);
-    this.document = document;
-  }
-
-  override fromAttribute(value: string | null): E | null {
-    if (value == null) return this.defaultValue;
-    if (value === '') return this.defaultValue;
-    const element = this.document.querySelector<E>(`#${value}`);
-    return element;
-  }
-
-  override toAttribute(value: E | null): string | null {
-    if (value == null) return null;
-    if (value.id === '') return null;
-    return value.id;
-  }
+export function asPlacement(
+  value: unknown,
+  defaultValue: Placement = 'auto',
+): Placement {
+  return isPlacement(value) ? value : defaultValue;
 }
