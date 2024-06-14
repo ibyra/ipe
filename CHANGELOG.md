@@ -1,5 +1,11 @@
 # @ibyra/ipe
 
+## 0.0.5
+
+### Patch Changes
+
+- db00ffb: Add "html" string template tag
+
 ## 0.0.4
 
 ### Patch Changes
