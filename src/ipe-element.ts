@@ -2,7 +2,7 @@
 /// <reference lib="DOM" />
 /// <reference lib="DOM.Iterable" />
 
-import { ReactiveElement } from 'lit';
+import { ReactiveElement, adoptStyles } from 'lit';
 
 /**
  * Represents a base component that all other Ipe elements can extend.
@@ -18,13 +18,18 @@ export abstract class IpeElement extends ReactiveElement {
   }
 
   protected override createRenderRoot(): HTMLElement | DocumentFragment {
-    const renderRoot = super.createRenderRoot();
-    if (renderRoot.children.length !== 0) return renderRoot;
+    // If there's a declarative shadow dom, returns the current shadow root
+    if (this.shadowRoot != null) return this.shadowRoot;
+
+    const options = (this.constructor as typeof IpeElement).shadowRootOptions;
+    const renderRoot = this.attachShadow(options);
+    const styles = (this.constructor as typeof IpeElement).elementStyles;
+    adoptStyles(renderRoot, styles);
 
     const template = (this.constructor as typeof IpeElement).template;
     if (template == null) return renderRoot;
 
-    renderRoot.replaceChildren(template.content.cloneNode(true));
+    renderRoot.append(template.content.cloneNode(true));
     return renderRoot;
   }
 

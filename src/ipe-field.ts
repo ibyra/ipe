@@ -8,15 +8,13 @@ import {
 import { IpeElement } from './ipe-element';
 import { css } from 'lit';
 
-// TODO: Replace setting 'aria-invalid' attribute on the field to use a custom
-//       pseudo class state.
-
 export class IpeFieldElement extends IpeElement {
   static override styles = css`
     :host {
       display: block;
     }
-    :host(:state(invalid)) {
+    :host(:state(invalid)),
+    :host(:state(user-invalid)) {
       color: red;
     }
   `;
@@ -127,7 +125,12 @@ export class IpeFieldElement extends IpeElement {
     const control = this._controls.find((control) => control === target);
     if (control == null) return;
     this._internals.ariaInvalid = 'true';
-    this._internals.states.add('invalid');
+    if (control.matches(':invalid, :state(invalid)')) {
+      this._internals.states.add('invalid');
+    }
+    if (control.matches(':user-invalid, :state(user-invalid)')) {
+      this._internals.states.add('user-invalid');
+    }
     this._invalidated = true;
 
     const errormessage = getErrorMessageElement(control);
@@ -170,6 +173,7 @@ export class IpeFieldElement extends IpeElement {
 
     this._internals.ariaInvalid = 'false';
     this._internals.states.delete('invalid');
+    this._internals.states.delete('user-invalid');
     const errormessage = getErrorMessageElement(control);
     if (errormessage == null) return;
 
@@ -180,6 +184,7 @@ export class IpeFieldElement extends IpeElement {
     this._invalidated = false;
     this._internals.ariaInvalid = 'false';
     this._internals.states.delete('invalid');
+    this._internals.states.delete('user-invalid');
     for (const control of this._controls) {
       control.setCustomValidity('');
       const errormessage = getErrorMessageElement(control);

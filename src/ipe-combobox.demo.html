@@ -52,6 +52,108 @@
         <p>
           <label for="user">Select the config</label>
           <ipe-combobox id="user" name="user" required>
+            <template shadowrootmode="open">
+              <style>
+                :host {
+                  box-sizing: border-box;
+                  position: relative;
+                  display: block;
+                  width: 100%;
+                  height: 2.5em;
+                  border: solid 0.125em dimgray;
+                  background-color: white;
+                  font-size: 1em;
+                  line-height: 1;
+                  cursor: pointer;
+                }
+
+                #input {
+                  box-sizing: border-box;
+                  position: absolute;
+                  display: block;
+                  border: none;
+                  top: 0;
+                  left: 0;
+                  height: 100%;
+                  width: 100%;
+                  padding: 0 0.5em;
+                  background-color: transparent;
+                  text-align: left;
+                  overflow: hidden;
+                  text-overflow: ellipsis;
+                  white-space: nowrap;
+                  color: dimgray;
+                  cursor: pointer;
+                }
+
+                #picked {
+                  box-sizing: border-box;
+                  position: absolute;
+                  display: flex;
+                  flex-direction: row;
+                  align-items: center;
+                  gap: 0.5em;
+                  border: none;
+                  top: 0;
+                  left: 0;
+                  height: 100%;
+                  width: 100%;
+                  padding: 0 0.5em;
+                  background-color: transparent;
+                  text-align: left;
+                  color: currentColor;
+                  pointer-events: none;
+                }
+                #picked::slotted(*) {
+                  display: none;
+                  border: 0;
+                  font-size: 1em;
+                }
+                #picked::slotted([selected]) {
+                  display: unset;
+                }
+
+                #popover {
+                  display: hidden;
+                  box-sizing: border-box;
+                  margin: 0;
+                  border: solid 0.125em dimgray;
+                  padding: 0;
+                  background-color: white;
+                }
+                #popover:popover-open {
+                  display: unset;
+                }
+                #popover::slotted(*) {
+                  border: 0;
+                  cursor: pointer;
+                }
+                #popover::slotted([active]) {
+                  background-color: rgba(255, 255, 255, 0.1);
+                }
+                #popover::slotted([selected]) {
+                  background-color: rgba(255, 255, 255, 0.2);
+                }
+                #popover::slotted([active][selected]) {
+                  background-color: rgba(255, 255, 255, 0.3);
+                }
+              </style>
+              <input
+                id="input"
+                part="placeholder"
+                type="button"
+                popovertarget="popover"
+                inert
+              />
+              <slot id="picked" name="picked" part="picked"></slot>
+              <slot></slot>
+              <slot
+                id="popover"
+                name="popover"
+                part="popover"
+                popover="auto"
+              ></slot>
+            </template>
             <ipe-option slot="picked" value="single"> Single user </ipe-option>
             <ipe-option slot="picked" value="multiple">
               Multi-users
@@ -72,6 +174,108 @@
             maxlength="3"
             placeholder="Two or three fruits"
           >
+            <template shadowrootmode="open">
+              <style>
+                :host {
+                  box-sizing: border-box;
+                  position: relative;
+                  display: block;
+                  width: 100%;
+                  height: 2.5em;
+                  border: solid 0.125em dimgray;
+                  background-color: white;
+                  font-size: 1em;
+                  line-height: 1;
+                  cursor: pointer;
+                }
+
+                #input {
+                  box-sizing: border-box;
+                  position: absolute;
+                  display: block;
+                  border: none;
+                  top: 0;
+                  left: 0;
+                  height: 100%;
+                  width: 100%;
+                  padding: 0 0.5em;
+                  background-color: transparent;
+                  text-align: left;
+                  overflow: hidden;
+                  text-overflow: ellipsis;
+                  white-space: nowrap;
+                  color: dimgray;
+                  cursor: pointer;
+                }
+
+                #picked {
+                  box-sizing: border-box;
+                  position: absolute;
+                  display: flex;
+                  flex-direction: row;
+                  align-items: center;
+                  gap: 0.5em;
+                  border: none;
+                  top: 0;
+                  left: 0;
+                  height: 100%;
+                  width: 100%;
+                  padding: 0 0.5em;
+                  background-color: transparent;
+                  text-align: left;
+                  color: currentColor;
+                  pointer-events: none;
+                }
+                #picked::slotted(*) {
+                  display: none;
+                  border: 0;
+                  font-size: 1em;
+                }
+                #picked::slotted([selected]) {
+                  display: unset;
+                }
+
+                #popover {
+                  display: hidden;
+                  box-sizing: border-box;
+                  margin: 0;
+                  border: solid 0.125em dimgray;
+                  padding: 0;
+                  background-color: white;
+                }
+                #popover:popover-open {
+                  display: unset;
+                }
+                #popover::slotted(*) {
+                  border: 0;
+                  cursor: pointer;
+                }
+                #popover::slotted([active]) {
+                  background-color: rgba(255, 255, 255, 0.1);
+                }
+                #popover::slotted([selected]) {
+                  background-color: rgba(255, 255, 255, 0.2);
+                }
+                #popover::slotted([active][selected]) {
+                  background-color: rgba(255, 255, 255, 0.3);
+                }
+              </style>
+              <input
+                id="input"
+                part="placeholder"
+                type="button"
+                popovertarget="popover"
+                inert
+              />
+              <slot id="picked" name="picked" part="picked"></slot>
+              <slot></slot>
+              <slot
+                id="popover"
+                name="popover"
+                part="popover"
+                popover="auto"
+              ></slot>
+            </template>
             <ipe-option slot="picked" value="apple">Apple</ipe-option>
             <ipe-option slot="picked" value="banana">Banana</ipe-option>
             <ipe-option slot="picked" value="cranberry">Cranberry</ipe-option>

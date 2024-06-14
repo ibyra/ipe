@@ -52,17 +52,17 @@ export class IpeDisclosureElement extends IpeElement implements HTMLDisclosure {
       display: block;
       overflow: hidden;
     }
-    #content {
+    slot:not([name]) {
       display: none;
     }
-    :host([open]) #content {
+    :host([open]) slot:not([name]) {
       display: contents;
     }
   `;
 
   static override template = html`
-    <slot id="summary" name="summary" part="summary"></slot>
-    <slot id="content" part="content"></slot>
+    <slot name="summary" part="summary"></slot>
+    <slot part="content"></slot>
   `;
 
   public declare open: boolean;
