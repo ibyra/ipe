@@ -8,8 +8,6 @@ import {
   shift as shiftMiddleware,
 } from '@floating-ui/dom';
 import { css, type PropertyDeclarations, type PropertyValues } from 'lit';
-import { isEqual } from 'moderndash';
-import { IpeOptlistElement } from './ipe-optlist';
 import {
   type HTMLOpenable,
   type HTMLOptlist,
@@ -20,11 +18,16 @@ import {
   isHTMLValueOption,
   nextOptionOf,
   previousOptionOf,
-  BoolAttributeConverter,
-  IntAttributeConverter,
-  PlacementAttributeConverter,
-  StringAttributeConverter,
+  html,
 } from './commons';
+import {
+  BoolConverter,
+  IntConverter,
+  PlacementConverter,
+  StrConverter,
+} from './attributes';
+import { equals as arrayEquals } from './arrays';
+import { IpeOptlistElement } from './ipe-optlist';
 
 // TODO: Add support to option group element
 
@@ -36,27 +39,27 @@ export class IpeComboboxElement
     open: {
       reflect: true,
       attribute: 'open',
-      converter: new BoolAttributeConverter(),
+      converter: new BoolConverter(),
     },
     offset: {
       reflect: true,
       attribute: 'offset',
-      converter: new IntAttributeConverter(0),
+      converter: new IntConverter(0),
     },
     shift: {
       reflect: true,
       attribute: 'shift',
-      converter: new IntAttributeConverter(0),
+      converter: new IntConverter(0),
     },
     placement: {
       reflect: true,
       attribute: 'placement',
-      converter: new PlacementAttributeConverter(),
+      converter: new PlacementConverter(),
     },
     placeholder: {
       reflect: true,
       attribute: 'placeholder',
-      converter: new StringAttributeConverter(),
+      converter: new StrConverter(),
     },
   };
 
@@ -146,8 +149,14 @@ export class IpeComboboxElement
     }
   `;
 
-  static override content = `
-    <input id="input" part="placeholder" type="button" popovertarget="popover" inert />
+  static override template = html`
+    <input
+      id="input"
+      part="placeholder"
+      type="button"
+      popovertarget="popover"
+      inert
+    />
     <slot id="picked" name="picked" part="picked"></slot>
     <slot></slot>
     <slot id="popover" name="popover" part="popover" popover="auto"></slot>
@@ -179,6 +188,7 @@ export class IpeComboboxElement
     this._defaultPlaceholder = '';
     this._updateCleanup = null;
     this._picked = [];
+    this._internals.role = 'combobox';
   }
 
   showPicker(): void {
@@ -203,7 +213,7 @@ export class IpeComboboxElement
 
     this._internals.ariaHasPopup = 'true';
     if (!this.hasAttribute('aria-haspopup')) {
-      this.ariaHasPopup = 'true';
+      this._internals.ariaHasPopup = 'true';
     }
 
     this.addEventListener('click', this.handleClick);
@@ -342,7 +352,6 @@ export class IpeComboboxElement
 
   protected openUpdated(): void {
     this._internals.ariaExpanded = this.open ? 'true' : 'false';
-    this.ariaExpanded = this.open ? 'true' : 'false';
   }
 
   protected offsetUpdated(): void {
@@ -362,7 +371,6 @@ export class IpeComboboxElement
   protected placeholderUpdated(): void {
     this._formState.set('placeholder', this.placeholder);
     this._internals.ariaPlaceholder = this.placeholder;
-    this.ariaPlaceholder = this.placeholder;
     const inputElement = this.inputElement;
     if (inputElement == null) return;
     const selected = this.getOptionsValues();
@@ -399,7 +407,7 @@ export class IpeComboboxElement
     const elements = await this.getDefinedAssignedElements('popover');
     const newValue = elements.filter(isHTMLValueOption);
     const oldValue = this._options;
-    if (isEqual(oldValue, newValue)) return;
+    if (arrayEquals(oldValue, newValue)) return;
 
     this._options = newValue;
     this.optionsUpdated(oldValue);
@@ -409,7 +417,7 @@ export class IpeComboboxElement
     const elements = await this.getDefinedAssignedElements('picked');
     const newValue = elements.filter(isHTMLValueOption);
     const oldValue = this._options;
-    if (isEqual(oldValue, newValue)) return;
+    if (arrayEquals(oldValue, newValue)) return;
 
     this._picked = newValue;
     this.pickedUpdated(oldValue);

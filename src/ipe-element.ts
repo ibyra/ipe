@@ -8,7 +8,7 @@ import { ReactiveElement } from 'lit';
  * Represents a base component that all other Ipe elements can extend.
  */
 export abstract class IpeElement extends ReactiveElement {
-  static content: string | null = null;
+  static template: HTMLTemplateElement | null = null;
 
   #boundListeners: WeakMap<EventListener, EventListener>;
 
@@ -21,18 +21,10 @@ export abstract class IpeElement extends ReactiveElement {
     const renderRoot = super.createRenderRoot();
     if (renderRoot.children.length !== 0) return renderRoot;
 
-    const template = this.querySelector('template[shadowrootmode="open"]');
-    if (template != null && template instanceof HTMLTemplateElement) {
-      template.remove();
-    }
+    const template = (this.constructor as typeof IpeElement).template;
+    if (template == null) return renderRoot;
 
-    const content = (this.constructor as typeof IpeElement).content;
-    if (content == null) return renderRoot;
-
-    const element = this.ownerDocument.createElement('template');
-    element.innerHTML = content;
-    renderRoot.replaceChildren(element.content);
-    element.remove();
+    renderRoot.replaceChildren(template.content.cloneNode(true));
     return renderRoot;
   }
 
@@ -76,18 +68,15 @@ export abstract class IpeElement extends ReactiveElement {
   ): Promise<Array<Element>> {
     const elements = this.getAssignedElements(name);
     const notDefined = elements.filter((e) => e.matches(':not(:defined)'));
-
     if (notDefined.length === 0) return elements;
 
-    const definitionPromises = Array.from(
-      new Set(notDefined.map((element) => element.localName)),
-      (name) => window.customElements.whenDefined(name),
-    );
-
-    await Promise.all(definitionPromises);
-
-    notDefined.map((element) => window.customElements.upgrade(element));
-
+    const customElements = this.ownerDocument.defaultView!.customElements;
+    const tags = new Set(notDefined.map((element) => element.localName));
+    const promises = Array.from(tags, (t) => customElements.whenDefined(t));
+    await Promise.all(promises);
+    for (const element of notDefined) {
+      customElements.upgrade(element);
+    }
     return elements;
   }
 

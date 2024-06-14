@@ -1,9 +1,6 @@
 import { css, type PropertyDeclarations, type PropertyValues } from 'lit';
-import {
-  type HTMLValueOption,
-  BoolAttributeConverter,
-  StringAttributeConverter,
-} from './commons';
+import { type HTMLValueOption, html } from './commons';
+import { BoolConverter, StrConverter } from './attributes';
 import { IpeElement } from './ipe-element';
 
 export class IpeOptionElement extends IpeElement implements HTMLValueOption {
@@ -11,17 +8,17 @@ export class IpeOptionElement extends IpeElement implements HTMLValueOption {
     value: {
       reflect: true,
       attribute: 'value',
-      converter: new StringAttributeConverter(),
+      converter: new StrConverter(),
     },
     disabled: {
       reflect: true,
       attribute: 'disabled',
-      converter: new BoolAttributeConverter(),
+      converter: new BoolConverter(),
     },
     selected: {
       reflect: true,
       attribute: 'selected',
-      converter: new BoolAttributeConverter(),
+      converter: new BoolConverter(),
     },
   };
 
@@ -40,9 +37,7 @@ export class IpeOptionElement extends IpeElement implements HTMLValueOption {
     }
   `;
 
-  static override content = `
-    <slot></slot>
-  `;
+  static override template = html`<slot></slot>`;
 
   public declare value: string;
   public declare disabled: boolean;
@@ -64,6 +59,7 @@ export class IpeOptionElement extends IpeElement implements HTMLValueOption {
     this._defaultSelected = false;
     this._userInteracted = false;
     this._internals = this.attachInternals();
+    this._internals.role = 'option';
   }
 
   get defaultValue(): string {
@@ -103,10 +99,6 @@ export class IpeOptionElement extends IpeElement implements HTMLValueOption {
     this._defaultDisabled = this.disabled;
     this._defaultSelected = this.selected;
 
-    if (!this.hasAttribute('role')) {
-      this.role = 'option';
-    }
-
     this.addEventListener('click', this.handleClick);
     this.addEventListener('keydown', this.handleKeydown);
   }
@@ -132,13 +124,11 @@ export class IpeOptionElement extends IpeElement implements HTMLValueOption {
   protected disabledUpdated(): void {
     const disabled = this.disabled ? 'true' : 'false';
     this.inert = this.disabled;
-    this.ariaDisabled = disabled;
     this._internals.ariaDisabled = disabled ? 'true' : 'false';
   }
 
   protected selectedUpdated(): void {
     const selected = this.selected ? 'true' : 'false';
-    this.ariaSelected = selected;
     this._internals.ariaSelected = selected;
   }
 

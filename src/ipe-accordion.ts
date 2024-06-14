@@ -1,5 +1,4 @@
-import { isEqual } from 'moderndash';
-import { css, type PropertyValues } from 'lit';
+import { css, type PropertyDeclarations, type PropertyValues } from 'lit';
 import {
   getFirstOption,
   getLastOption,
@@ -8,37 +7,36 @@ import {
   isHTMLDisclosure,
   nextOptionOf,
   previousOptionOf,
-  BoolAttributeConverter,
+  html,
+  type HTMLOptlist,
+  type HTMLDisclosure,
 } from './commons';
-import { type HTMLOptlist, type HTMLDisclosure } from './commons';
+import { equals as arrayEquals } from './arrays';
+import { BoolConverter } from './attributes';
 import { IpeElement } from './ipe-element';
 
-// TODO: Implement min/max length, that allows the number of open items
-
-// TODO: Add "orientation" to allow horizontal accordions
-
-// TODO: Add custom pseudo class state when the accordion is open or not.
-//       This requires ElementInternals.states to be available on browsers.
+// TODO: Implement minimum and maximum length constraints to limit the number
+//       of open items.
 
 export class IpeAccordionElement
   extends IpeElement
   implements HTMLOptlist<HTMLDisclosure>
 {
-  static override properties = {
+  static override properties: PropertyDeclarations = {
     disabled: {
       reflect: true,
       attribute: 'disabled',
-      converter: new BoolAttributeConverter(),
+      converter: new BoolConverter(),
     },
     multiple: {
       reflect: true,
       attribute: 'multiple',
-      converter: new BoolAttributeConverter(),
+      converter: new BoolConverter(),
     },
     required: {
       reflect: true,
       attribute: 'required',
-      converter: new BoolAttributeConverter(),
+      converter: new BoolConverter(),
     },
   };
 
@@ -48,16 +46,14 @@ export class IpeAccordionElement
     }
   `;
 
-  static override content = `
-    <slot></slot>
-  `;
+  static override template = html`<slot></slot>`;
 
   public declare disabled: boolean;
   public declare multiple: boolean;
   public declare required: boolean;
 
   protected declare _internals: ElementInternals;
-  protected declare _disclosures: Array<HTMLDisclosure>;
+  protected declare _disclosures: ReadonlyArray<HTMLDisclosure>;
   protected declare _observer: MutationObserver;
 
   constructor() {
@@ -66,7 +62,13 @@ export class IpeAccordionElement
     this.multiple = false;
     this.required = false;
     this._internals = this.attachInternals();
+    this._internals.ariaOrientation = 'vertical';
     this._disclosures = [];
+    this._observer = new MutationObserver((mutations) => {
+      for (const mutation of mutations) {
+        this.handleMutation(mutation);
+      }
+    });
   }
 
   get options(): Array<HTMLDisclosure> {
@@ -153,16 +155,16 @@ export class IpeAccordionElement
 
   protected disabledUpdated(): void {
     this.inert = this.disabled;
-    this.ariaDisabled = this.disabled ? 'true' : 'false';
     this._internals.ariaDisabled = this.disabled ? 'true' : 'false';
   }
 
   protected multipleUpdated(): void {
-    this.ariaMultiSelectable = this.multiple ? 'true' : 'false';
     this._internals.ariaMultiSelectable = this.multiple ? 'true' : 'false';
   }
 
   protected optionsUpdated(oldValue: ReadonlyArray<HTMLDisclosure>): void {
+    this._observer.disconnect();
+
     for (const elem of oldValue) {
       this.unsubscribe(elem, 'beforetoggle', this.handleOptionBeforeToggle);
       this.unsubscribe(elem, 'toggle', this.handleOptionToggle);
@@ -171,7 +173,20 @@ export class IpeAccordionElement
     for (const elem of this._disclosures) {
       this.subscribe(elem, 'beforetoggle', this.handleOptionBeforeToggle);
       this.subscribe(elem, 'toggle', this.handleOptionToggle);
+      this._observer.observe(elem, { attributeFilter: ['open'] });
     }
+
+    this.openUpdated();
+  }
+
+  protected openUpdated(): void {
+    for (const elem of this._disclosures) {
+      if (elem.open) {
+        this._internals.states.add('open');
+        return;
+      }
+    }
+    this._internals.states.delete('open');
   }
 
   protected async updateOptions(): Promise<void> {
@@ -179,10 +194,29 @@ export class IpeAccordionElement
     const newValue = elements.filter(isHTMLDisclosure);
     const oldValue = this._disclosures;
 
-    if (isEqual(oldValue, newValue)) return;
+    if (arrayEquals(oldValue, newValue)) return;
 
     this._disclosures = newValue;
     this.optionsUpdated(oldValue);
+  }
+
+  protected handleMutation(mutation: MutationRecord): void {
+    if (mutation.type !== 'attributes') return;
+
+    const { attributeName } = mutation;
+    if (attributeName !== 'open') return;
+
+    const { target } = mutation;
+    if (!(target instanceof Element)) return;
+
+    const content = this.contentSlot;
+    if (target.assignedSlot !== content) return;
+
+    this.openUpdated();
+  }
+
+  protected handleSlotChange(): void {
+    this.updateOptions();
   }
 
   protected handleFocusIn(event: FocusEvent): void {
@@ -243,10 +277,6 @@ export class IpeAccordionElement
 
     // @ts-expect-error Focus visible is currently only implemented in Firefox
     button.focus({ preventScroll: true, focusVisible: true });
-  }
-
-  protected handleSlotChange(): void {
-    this.updateOptions();
   }
 
   protected handleOptionBeforeToggle(event: ToggleEvent): void {

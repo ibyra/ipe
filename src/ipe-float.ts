@@ -9,14 +9,13 @@ import {
   shift as shiftMiddleware,
 } from '@floating-ui/dom';
 import { css, type PropertyDeclarations, type PropertyValues } from 'lit';
+import { type HTMLOpenable, type Placement, html } from './commons';
 import {
-  type HTMLOpenable,
-  type Placement,
-  BoolAttributeConverter,
-  IdRefAttributeConverter,
-  IntAttributeConverter,
-  PlacementAttributeConverter,
-} from './commons';
+  BoolConverter,
+  IdRefConverter,
+  IntConverter,
+  PlacementConverter,
+} from './attributes';
 import { IpeElement } from './ipe-element';
 
 // TODO: Observe changes on anchor ID to update the float element;
@@ -26,32 +25,32 @@ export class IpeFloatElement extends IpeElement implements HTMLOpenable {
     open: {
       reflect: true,
       attribute: 'open',
-      converter: new BoolAttributeConverter(),
+      converter: new BoolConverter(),
     },
     inline: {
       reflect: true,
       attribute: 'inline',
-      converter: new BoolAttributeConverter(),
+      converter: new BoolConverter(),
     },
     offset: {
       reflect: true,
       attribute: 'offset',
-      converter: new IntAttributeConverter(0),
+      converter: new IntConverter(0),
     },
     shift: {
       reflect: true,
       attribute: 'shift',
-      converter: new IntAttributeConverter(0),
+      converter: new IntConverter(0),
     },
     placement: {
       reflect: true,
       attribute: 'placement',
-      converter: new PlacementAttributeConverter(),
+      converter: new PlacementConverter(),
     },
     anchor: {
       reflect: true,
       attribute: 'anchor',
-      converter: new IdRefAttributeConverter(document),
+      converter: new IdRefConverter(document),
     },
   };
 
@@ -67,9 +66,7 @@ export class IpeFloatElement extends IpeElement implements HTMLOpenable {
     }
   `;
 
-  static override content = `
-    <slot></slot>
-  `;
+  static override template = html`<slot></slot>`;
 
   public declare open: boolean;
   public declare inline: boolean;

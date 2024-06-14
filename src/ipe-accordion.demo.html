@@ -10,15 +10,23 @@
     <script type="module" src="./ipe-disclosure.ts"></script>
     <style>
       ipe-disclosure {
-        background-color: var(--box-bg);
         line-height: 1;
+      }
+      ipe-accordion {
+        background-color: var(--box-bg);
+      }
+      ipe-accordion:state(open) {
+        background-color: var(--info-bg);
       }
     </style>
   </head>
   <body>
     <main>
       <h1><code>ipe-accordion</code> demo</h1>
-      <ipe-accordion>
+      <ipe-accordion multiple>
+        <template shadowrootmode="open">
+          <slot></slot>
+        </template>
         <ipe-disclosure id="a" open>
           <button slot="summary">Summary A</button>
           <p>

@@ -1,10 +1,6 @@
 import { css, type PropertyDeclarations, type PropertyValues } from 'lit';
-import {
-  type Checked,
-  asChecked,
-  CheckedAttributeConverter,
-  StringAttributeConverter,
-} from './commons';
+import { type Checked, asChecked, html } from './commons';
+import { CheckedConverter, StrConverter } from './attributes';
 import {
   type FormValidity,
   IpeElementFormSingleValue,
@@ -16,12 +12,12 @@ export class IpeCheckboxElement extends IpeElementFormSingleValue {
     value: {
       reflect: true,
       attribute: 'value',
-      converter: new StringAttributeConverter('on'),
+      converter: new StrConverter('on'),
     },
     checked: {
       reflect: true,
       attribute: 'checked',
-      converter: new CheckedAttributeConverter(),
+      converter: new CheckedConverter(),
     },
   };
 
@@ -50,14 +46,12 @@ export class IpeCheckboxElement extends IpeElementFormSingleValue {
         inset 0.25em 0.25em 0 white,
         inset -0.25em -0.25em 0 white;
     }
-    :host([aria-invalid='true']) {
+    :host(:state(user-invalid)) {
       border-color: red;
     }
   `;
 
-  static override content = `
-    <slot></slot>
-  `;
+  static override template = html`<slot></slot>`;
 
   public declare value: string;
   public declare checked: Checked;
@@ -71,14 +65,13 @@ export class IpeCheckboxElement extends IpeElementFormSingleValue {
     this.checked = 'false';
     this._defaultValue = 'on';
     this._defaultChecked = 'false';
+    this._internals.role = 'checkbox';
   }
 
   override connectedCallback(): void {
     super.connectedCallback();
     this._defaultValue = this.value;
     this._defaultChecked = this.checked;
-
-    this._internals.role = 'checkbox';
 
     if (!this.hasAttribute('tabindex')) {
       this.tabIndex = 0;
@@ -142,7 +135,6 @@ export class IpeCheckboxElement extends IpeElementFormSingleValue {
   protected checkedUpdated(): void {
     this._formState.set('checked', this.checked);
     this._internals.ariaChecked = this.checked;
-    this.ariaChecked = this.checked;
   }
 
   protected handleClick(event: MouseEvent): void {

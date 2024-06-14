@@ -1,13 +1,12 @@
 import { css, type PropertyDeclarations, type PropertyValues } from 'lit';
-import { isEqual } from 'moderndash';
 import {
   type HTMLDisclosure,
   type HTMLButton,
   isHTMLButton,
-  BoolAttributeConverter,
-  IntAttributeConverter,
-  StringAttributeConverter,
+  html,
 } from './commons';
+import { BoolConverter, IntConverter, StrConverter } from './attributes';
+import { equals as arrayEquals } from './arrays';
 import { IpeElement } from './ipe-element';
 
 // TODO: Add "orientation" to allow horizontal accordions
@@ -19,32 +18,32 @@ export class IpeDisclosureElement extends IpeElement implements HTMLDisclosure {
     id: {
       reflect: true,
       attribute: 'id',
-      converter: new StringAttributeConverter(''),
+      converter: new StrConverter(''),
     },
     open: {
       reflect: false,
       attribute: 'open',
-      converter: new BoolAttributeConverter(),
+      converter: new BoolConverter(),
     },
     disabled: {
       reflect: true,
       attribute: 'disabled',
-      converter: new BoolAttributeConverter(),
+      converter: new BoolConverter(),
     },
     duration: {
       reflect: true,
       attribute: 'duration',
-      converter: new IntAttributeConverter(150),
+      converter: new IntConverter(150),
     },
     delay: {
       reflect: true,
       attribute: 'delay',
-      converter: new IntAttributeConverter(0),
+      converter: new IntConverter(0),
     },
     easing: {
       reflect: true,
       attribute: 'easing',
-      converter: new StringAttributeConverter('ease-in-out'),
+      converter: new StrConverter('ease-in-out'),
     },
   };
 
@@ -57,11 +56,11 @@ export class IpeDisclosureElement extends IpeElement implements HTMLDisclosure {
       display: none;
     }
     :host([open]) #content {
-      display: unset;
+      display: contents;
     }
   `;
 
-  static override content = `
+  static override template = html`
     <slot id="summary" name="summary" part="summary"></slot>
     <slot id="content" part="content"></slot>
   `;
@@ -86,6 +85,7 @@ export class IpeDisclosureElement extends IpeElement implements HTMLDisclosure {
     this.easing = 'ease-in-out';
     this._animation = null;
     this._internals = this.attachInternals();
+    this._internals.ariaOrientation = 'vertical';
     this._buttons = [];
     this._observer = new MutationObserver((mutations) => {
       for (const mutation of mutations) {
@@ -120,11 +120,7 @@ export class IpeDisclosureElement extends IpeElement implements HTMLDisclosure {
   override connectedCallback(): void {
     super.connectedCallback();
     this.updateButtons();
-    this._observer.observe(this, {
-      subtree: true,
-      attributes: true,
-      attributeFilter: ['type'],
-    });
+    this._observer.observe(this, { subtree: true, attributeFilter: ['type'] });
     const summary = this.summarySlot;
     if (summary == null) return;
     this.subscribe(summary, 'slotchange', this.handleSummarySlotChange);
@@ -133,6 +129,7 @@ export class IpeDisclosureElement extends IpeElement implements HTMLDisclosure {
   override disconnectedCallback(): void {
     super.disconnectedCallback();
     this.updateButtons();
+    this._observer.disconnect();
     const summary = this.summarySlot;
     if (summary == null) return;
     this.unsubscribe(summary, 'slotchange', this.handleSummarySlotChange);
@@ -166,7 +163,6 @@ export class IpeDisclosureElement extends IpeElement implements HTMLDisclosure {
   }
 
   protected disabledUpdated(): void {
-    this.ariaDisabled = this.disabled ? 'true' : 'false';
     this._internals.ariaDisabled = this.disabled ? 'true' : 'false';
     for (const button of this.buttons) {
       button.disabled = this.disabled;
@@ -186,6 +182,7 @@ export class IpeDisclosureElement extends IpeElement implements HTMLDisclosure {
       for (const element of this.buttons) {
         element.ariaExpanded = 'true';
       }
+      this._internals.states.add('opening');
       this._animation = this.animate(
         { height: [startHeight, endHeight] },
         { duration: this.duration, delay: this.delay, easing: this.easing },
@@ -202,6 +199,7 @@ export class IpeDisclosureElement extends IpeElement implements HTMLDisclosure {
       summary.style.removeProperty('display');
       const height = rect.height;
       const endHeight = `${height}px`;
+      this._internals.states.add('closing');
       this._animation = this.animate(
         { height: [startHeight, endHeight] },
         { duration: this.duration, delay: this.delay, easing: this.easing },
@@ -234,7 +232,7 @@ export class IpeDisclosureElement extends IpeElement implements HTMLDisclosure {
     const elements = await this.getDefinedAssignedElements('summary');
     const newValue = elements.filter(isHTMLButton);
     const oldValue = this._buttons;
-    if (isEqual(oldValue, newValue)) return;
+    if (arrayEquals(oldValue, newValue)) return;
 
     this._buttons = newValue;
     this.buttonsUpdated(oldValue);
@@ -267,7 +265,9 @@ export class IpeDisclosureElement extends IpeElement implements HTMLDisclosure {
 
     const { target } = mutation;
     if (!(target instanceof Element)) return;
-    if (target.assignedSlot !== this.summarySlot) return;
+
+    const summary = this.summarySlot;
+    if (target.assignedSlot !== summary) return;
 
     this.updateButtons();
   }
@@ -282,11 +282,13 @@ export class IpeDisclosureElement extends IpeElement implements HTMLDisclosure {
 
   protected handleOpenAnimationEnd(): void {
     this._animation = null;
+    this._internals.states.delete('opening');
   }
 
   protected handleCloseAnimationEnd(): void {
     this._animation = null;
     this.toggleAttribute('open', false);
+    this._internals.states.delete('closing');
   }
 }
 

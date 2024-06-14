@@ -1,8 +1,9 @@
-import { isEqual } from 'moderndash';
+import { equals } from './arrays';
 import {
   type HTMLFormControl,
   getErrorMessageElement,
   isHTMLFormControl,
+  html,
 } from './commons';
 import { IpeElement } from './ipe-element';
 import { css } from 'lit';
@@ -15,11 +16,12 @@ export class IpeFieldElement extends IpeElement {
     :host {
       display: block;
     }
+    :host(:state(invalid)) {
+      color: red;
+    }
   `;
 
-  static override content = `
-    <slot><slot>
-  `;
+  static override template = html`<slot></slot>`;
 
   protected declare _invalidated: boolean;
   protected declare _internals: ElementInternals;
@@ -30,6 +32,7 @@ export class IpeFieldElement extends IpeElement {
     super();
     this._invalidated = false;
     this._internals = this.attachInternals();
+    this._internals.role = 'group';
     this._controls = [];
     this._controlObserver = new MutationObserver((mutations) => {
       for (const mutation of mutations) {
@@ -92,7 +95,7 @@ export class IpeFieldElement extends IpeElement {
     const elements = await this.getDefinedAssignedElements();
     const newValue = elements.filter(isHTMLFormControl);
     const oldValue = this._controls;
-    if (isEqual(oldValue, newValue)) return;
+    if (equals(oldValue, newValue)) return;
 
     this._controls = newValue;
     this.controlsUpdated(oldValue);
@@ -102,8 +105,8 @@ export class IpeFieldElement extends IpeElement {
     const errormessage = getErrorMessageElement(control);
     if (errormessage != null && errormessage.innerText.length > 0) {
       this._invalidated = true;
-      this.ariaInvalid = 'true';
       this._internals.ariaInvalid = 'true';
+      this._internals.states.add('invalid');
       control.setCustomValidity(errormessage.innerText);
     }
   }
@@ -123,9 +126,8 @@ export class IpeFieldElement extends IpeElement {
     const target = event.target;
     const control = this._controls.find((control) => control === target);
     if (control == null) return;
-
-    this.ariaInvalid = 'true';
     this._internals.ariaInvalid = 'true';
+    this._internals.states.add('invalid');
     this._invalidated = true;
 
     const errormessage = getErrorMessageElement(control);
@@ -166,8 +168,8 @@ export class IpeFieldElement extends IpeElement {
     const invalids = this._controls.filter((c) => !c.checkValidity());
     if (invalids.length > 0) return;
 
-    this.ariaInvalid = 'false';
     this._internals.ariaInvalid = 'false';
+    this._internals.states.delete('invalid');
     const errormessage = getErrorMessageElement(control);
     if (errormessage == null) return;
 
@@ -176,8 +178,8 @@ export class IpeFieldElement extends IpeElement {
 
   protected handleFormReset(): void {
     this._invalidated = false;
-    this.ariaInvalid = 'false';
     this._internals.ariaInvalid = 'false';
+    this._internals.states.delete('invalid');
     for (const control of this._controls) {
       control.setCustomValidity('');
       const errormessage = getErrorMessageElement(control);

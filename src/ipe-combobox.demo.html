@@ -12,6 +12,10 @@
         border: solid 2px var(--plain-graphical-fg);
         background-color: var(--plain-bg);
       }
+      ipe-combobox:state(user-invalid) {
+        background-color: var(--bad-bg);
+        border-color: var(--bad-graphical-fg);
+      }
       ipe-combobox::part(placeholder) {
         font: var(--main-font);
       }
@@ -48,15 +52,11 @@
         <p>
           <label for="user">Select the config</label>
           <ipe-combobox id="user" name="user" required>
-            <ipe-option slot="picked" value="single" selected>
-              Single user
-            </ipe-option>
+            <ipe-option slot="picked" value="single"> Single user </ipe-option>
             <ipe-option slot="picked" value="multiple">
               Multi-users
             </ipe-option>
-            <ipe-option slot="popover" value="single" selected>
-              One user
-            </ipe-option>
+            <ipe-option slot="popover" value="single"> One user </ipe-option>
             <ipe-option slot="popover" value="multiple">
               Multiple users
             </ipe-option>
