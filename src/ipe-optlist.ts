@@ -288,7 +288,9 @@ export class IpeOptlistElement
 
   protected override disabledUpdated(): void {
     super.disabledUpdated();
-    this.inert = this.disabled;
+    for (const option of this._options) {
+      option.disabled = this.disabled;
+    }
   }
 
   protected multipleUpdated(): void {
@@ -336,6 +338,7 @@ export class IpeOptlistElement
       this.subscribe(option, 'beforetoggle', this.handleOptionBeforeToggle);
       this.subscribe(option, 'toggle', this.handleOptionToggle);
       this.subscribe(option, 'change', this.handleOptionChange);
+      if (this.disabled) option.disabled = true;
     }
 
     if (this._restoredValues.length > 0) {
