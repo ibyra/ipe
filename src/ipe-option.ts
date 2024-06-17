@@ -153,6 +153,7 @@ export class IpeOptionElement extends IpeElement implements HTMLValueOption {
   }
 
   protected handleClick(): void {
+    if (this.disabled) return;
     this._userInteracted = true;
     this.toggleSelected();
   }
@@ -161,6 +162,7 @@ export class IpeOptionElement extends IpeElement implements HTMLValueOption {
     if (event.key !== ' ' && event.key !== 'Enter') return;
     // Prevent space scroll
     event.preventDefault();
+    if (this.disabled) return;
     this._userInteracted = true;
     this.toggleSelected();
   }

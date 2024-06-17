@@ -277,6 +277,7 @@ export class IpeDisclosureElement extends IpeElement implements HTMLDisclosure {
   }
 
   protected handleButtonClick(): void {
+    if (this.disabled) return;
     this.toggleOpen();
   }
 
