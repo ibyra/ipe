@@ -12,11 +12,17 @@
         flex-direction: column;
         line-height: 1;
       }
+      ipe-optlist[disabled] {
+        opacity: 50%;
+      }
       ipe-optlist:state(user-invalid) {
         background-color: var(--bad-bg);
       }
       ipe-option {
         border: none;
+      }
+      ipe-option[disabled] {
+        opacity: 50%;
       }
       ipe-option[active] {
         background-color: rgba(127, 200, 255, 0.1);
@@ -38,11 +44,15 @@
         <p>
           <label for="user">Select a config</label>
           <ipe-optlist id="user" name="user" required>
-            <ipe-option id="option-single" value="single" selected>
+            <ipe-option id="option-one" value="one" selected>
               Single User
             </ipe-option>
-            <ipe-option id="option-multiple" value="multiple">
-              Multiple Users
+            <ipe-option id="option-two" value="two"> Two Users </ipe-option>
+            <ipe-option id="option-three" value="three">
+              Three Users
+            </ipe-option>
+            <ipe-option id="option-more" value="more" disabled>
+              Four and more
             </ipe-option>
           </ipe-optlist>
         </p>
@@ -58,8 +68,18 @@
             <ipe-option value="apple"> Apple </ipe-option>
             <ipe-option value="banana"> Banana </ipe-option>
             <ipe-option value="cranberry"> Cranberry </ipe-option>
-            <ipe-option value="date"> Date </ipe-option>
+            <ipe-option value="date" disabled> Date </ipe-option>
             <ipe-option value="elderberry"> Elderberry </ipe-option>
+          </ipe-optlist>
+        </p>
+        <p>
+          <label for="points">Points</label>
+          <ipe-optlist id="points" name="points" disabled>
+            <ipe-option value="1">1</ipe-option>
+            <ipe-option value="2">2</ipe-option>
+            <ipe-option value="3">3</ipe-option>
+            <ipe-option value="5">5</ipe-option>
+            <ipe-option value="8">8</ipe-option>
           </ipe-optlist>
         </p>
         <p>

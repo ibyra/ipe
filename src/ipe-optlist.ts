@@ -286,13 +286,6 @@ export class IpeOptlistElement
     return super.updated(props);
   }
 
-  protected override disabledUpdated(): void {
-    super.disabledUpdated();
-    for (const option of this._options) {
-      option.disabled = this.disabled;
-    }
-  }
-
   protected multipleUpdated(): void {
     const multiple = this.multiple ? 'true' : 'false';
     this._formState.set('multiple', multiple);
@@ -338,7 +331,6 @@ export class IpeOptlistElement
       this.subscribe(option, 'beforetoggle', this.handleOptionBeforeToggle);
       this.subscribe(option, 'toggle', this.handleOptionToggle);
       this.subscribe(option, 'change', this.handleOptionChange);
-      if (this.disabled) option.disabled = true;
     }
 
     if (this._restoredValues.length > 0) {
@@ -489,7 +481,7 @@ export class IpeOptlistElement
     this._userInteracted = true;
     const option = this._options.find((option) => option === event.target);
     if (option == null) return;
-
+    if (option.disabled) return;
     event.preventDefault();
     this.activeElement = option;
   }

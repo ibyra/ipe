@@ -12,8 +12,15 @@
       ipe-disclosure {
         line-height: 1;
       }
+      ipe-disclosure[disabled] {
+        opacity: 0.5;
+      }
       ipe-accordion {
         background-color: var(--box-bg);
+        margin-bottom: 2rem;
+      }
+      ipe-accordion[disabled] {
+        opacity: 0.5;
       }
       ipe-accordion:state(open) {
         background-color: var(--info-bg);
@@ -51,6 +58,78 @@
         </ipe-disclosure>
         <ipe-disclosure id="c">
           <button slot="summary">Summary C</button>
+          <p>
+            Odit harum veniam illo totam enim impedit facilis perspiciatis,
+            numquam esse accusamus magni aliquam recusandae optio natus repellat
+            omnis eligendi temporibus! Unde.
+          </p>
+        </ipe-disclosure>
+      </ipe-accordion>
+
+      <ipe-accordion multiple>
+        <template shadowrootmode="open">
+          <style>
+            :host {
+              display: block;
+            }
+          </style>
+          <slot></slot>
+        </template>
+        <ipe-disclosure id="d" open>
+          <button slot="summary">Summary D</button>
+          <p>
+            Lorem ipsum dolor sit amet consectetur adipisicing elit. Recusandae
+            labore similique velit veniam et ullam eius voluptate voluptas
+            doloremque repellat repellendus nulla eum nam consequuntur minus
+            mollitia, cum blanditiis officia.
+          </p>
+        </ipe-disclosure>
+        <ipe-disclosure id="e" disabled>
+          <button slot="summary">Summary E</button>
+          <p>
+            Eos deserunt labore maiores voluptatem, architecto pariatur!
+            Corrupti facilis laborum, inventore cumque doloribus ducimus itaque
+            omnis tenetur.
+          </p>
+        </ipe-disclosure>
+        <ipe-disclosure id="f">
+          <button slot="summary">Summary F</button>
+          <p>
+            Odit harum veniam illo totam enim impedit facilis perspiciatis,
+            numquam esse accusamus magni aliquam recusandae optio natus repellat
+            omnis eligendi temporibus! Unde.
+          </p>
+        </ipe-disclosure>
+      </ipe-accordion>
+
+      <ipe-accordion multiple disabled>
+        <template shadowrootmode="open">
+          <style>
+            :host {
+              display: block;
+            }
+          </style>
+          <slot></slot>
+        </template>
+        <ipe-disclosure id="g" open>
+          <button slot="summary">Summary G</button>
+          <p>
+            Lorem ipsum dolor sit amet consectetur adipisicing elit. Recusandae
+            labore similique velit veniam et ullam eius voluptate voluptas
+            doloremque repellat repellendus nulla eum nam consequuntur minus
+            mollitia, cum blanditiis officia.
+          </p>
+        </ipe-disclosure>
+        <ipe-disclosure id="h" disabled>
+          <button slot="summary">Summary H</button>
+          <p>
+            Eos deserunt labore maiores voluptatem, architecto pariatur!
+            Corrupti facilis laborum, inventore cumque doloribus ducimus itaque
+            omnis tenetur.
+          </p>
+        </ipe-disclosure>
+        <ipe-disclosure id="i">
+          <button slot="summary">Summary I</button>
           <p>
             Odit harum veniam illo totam enim impedit facilis perspiciatis,
             numquam esse accusamus magni aliquam recusandae optio natus repellat

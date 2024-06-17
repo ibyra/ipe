@@ -155,9 +155,6 @@ export class IpeAccordionElement
 
   protected disabledUpdated(): void {
     this._internals.ariaDisabled = this.disabled ? 'true' : 'false';
-    for (const disclosure of this._disclosures) {
-      disclosure.disabled = this.disabled;
-    }
   }
 
   protected multipleUpdated(): void {
@@ -175,7 +172,6 @@ export class IpeAccordionElement
     for (const elem of this._disclosures) {
       this.subscribe(elem, 'beforetoggle', this.handleOptionBeforeToggle);
       this.subscribe(elem, 'toggle', this.handleOptionToggle);
-      if (this.disabled) elem.disabled = true;
       this._observer.observe(elem, { attributeFilter: ['open'] });
     }
 
@@ -283,6 +279,10 @@ export class IpeAccordionElement
   }
 
   protected handleOptionBeforeToggle(event: ToggleEvent): void {
+    if (this.disabled) {
+      event.preventDefault();
+      return;
+    }
     if (event.newState !== 'closed') return;
     if (!this.required) return;
     const selected = getSelectedOptions(this._disclosures);

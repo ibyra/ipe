@@ -305,24 +305,17 @@ export class IpeComboboxElement
   }
 
   protected override updated(props: PropertyValues<this>): void {
+    if (props.has('placeholder')) this.placeholderUpdated();
     if (props.has('open')) this.openUpdated();
     if (props.has('offset')) this.offsetUpdated();
     if (props.has('shift')) this.shiftUpdated();
     if (props.has('placement')) this.placementUpdated();
-    if (props.has('placeholder')) this.placeholderUpdated();
     const positionPropNames = this._positionProps;
     const changedPropNames = Array.from(props.keys());
     if (positionPropNames.some((name) => changedPropNames.includes(name))) {
       this.updatePosition();
     }
     return super.updated(props);
-  }
-
-  protected override disabledUpdated(): void {
-    super.disabledUpdated();
-    for (const pick of this._picked) {
-      pick.disabled = this.disabled;
-    }
   }
 
   protected openUpdated(): void {

@@ -12,6 +12,9 @@
         border: solid 2px var(--plain-graphical-fg);
         background-color: var(--plain-bg);
       }
+      ipe-combobox[disabled] {
+        opacity: 50%;
+      }
       ipe-combobox:state(user-invalid) {
         background-color: var(--bad-bg);
         border-color: var(--bad-graphical-fg);
@@ -26,6 +29,10 @@
       ipe-combobox[open]::part(popover) {
         display: flex;
         flex-direction: column;
+      }
+
+      ipe-option[disabled] {
+        opacity: 50%;
       }
 
       ipe-option[slot='picked'] {
@@ -52,109 +59,9 @@
         <p>
           <label for="user">Select the config</label>
           <ipe-combobox id="user" name="user" required>
-            <template shadowrootmode="open">
-              <style>
-                :host {
-                  box-sizing: border-box;
-                  position: relative;
-                  display: block;
-                  width: 100%;
-                  height: 2.5em;
-                  border: solid 0.125em dimgray;
-                  background-color: white;
-                  font-size: 1em;
-                  line-height: 1;
-                  cursor: pointer;
-                }
-
-                #input {
-                  box-sizing: border-box;
-                  position: absolute;
-                  display: block;
-                  border: none;
-                  top: 0;
-                  left: 0;
-                  height: 100%;
-                  width: 100%;
-                  padding: 0 0.5em;
-                  background-color: transparent;
-                  text-align: left;
-                  overflow: hidden;
-                  text-overflow: ellipsis;
-                  white-space: nowrap;
-                  color: dimgray;
-                  cursor: pointer;
-                }
-
-                #picked {
-                  box-sizing: border-box;
-                  position: absolute;
-                  display: flex;
-                  flex-direction: row;
-                  align-items: center;
-                  gap: 0.5em;
-                  border: none;
-                  top: 0;
-                  left: 0;
-                  height: 100%;
-                  width: 100%;
-                  padding: 0 0.5em;
-                  background-color: transparent;
-                  text-align: left;
-                  color: currentColor;
-                  pointer-events: none;
-                }
-                #picked::slotted(*) {
-                  display: none;
-                  border: 0;
-                  font-size: 1em;
-                }
-                #picked::slotted([selected]) {
-                  display: unset;
-                }
-
-                #popover {
-                  display: hidden;
-                  box-sizing: border-box;
-                  margin: 0;
-                  border: solid 0.125em dimgray;
-                  padding: 0;
-                  background-color: white;
-                }
-                #popover:popover-open {
-                  display: unset;
-                }
-                #popover::slotted(*) {
-                  border: 0;
-                  cursor: pointer;
-                }
-                #popover::slotted([active]) {
-                  background-color: rgba(255, 255, 255, 0.1);
-                }
-                #popover::slotted([selected]) {
-                  background-color: rgba(255, 255, 255, 0.2);
-                }
-                #popover::slotted([active][selected]) {
-                  background-color: rgba(255, 255, 255, 0.3);
-                }
-              </style>
-              <input
-                id="input"
-                part="placeholder"
-                type="button"
-                popovertarget="popover"
-                inert
-              />
-              <slot id="picked" name="picked" part="picked"></slot>
-              <slot></slot>
-              <slot
-                id="popover"
-                name="popover"
-                part="popover"
-                popover="auto"
-              ></slot>
-            </template>
-            <ipe-option slot="picked" value="single"> Single user </ipe-option>
+            <ipe-option slot="picked" value="single" selected>
+              Single user
+            </ipe-option>
             <ipe-option slot="picked" value="multiple">
               Multi-users
             </ipe-option>
@@ -189,7 +96,7 @@
                   cursor: pointer;
                 }
 
-                #input {
+                input {
                   box-sizing: border-box;
                   position: absolute;
                   display: block;
@@ -208,7 +115,7 @@
                   cursor: pointer;
                 }
 
-                #picked {
+                slot[name='picked'] {
                   box-sizing: border-box;
                   position: absolute;
                   display: flex;
@@ -226,16 +133,16 @@
                   color: currentColor;
                   pointer-events: none;
                 }
-                #picked::slotted(*) {
+                slot[name='picked']::slotted(*) {
                   display: none;
                   border: 0;
                   font-size: 1em;
                 }
-                #picked::slotted([selected]) {
+                slot[name='picked']::slotted([selected]) {
                   display: unset;
                 }
 
-                #popover {
+                slot[name='popover'] {
                   display: hidden;
                   box-sizing: border-box;
                   margin: 0;
@@ -243,49 +150,53 @@
                   padding: 0;
                   background-color: white;
                 }
-                #popover:popover-open {
+                slot[name='popover']:popover-open {
                   display: unset;
                 }
-                #popover::slotted(*) {
+                slot[name='popover']::slotted(*) {
                   border: 0;
                   cursor: pointer;
                 }
-                #popover::slotted([active]) {
+                slot[name='popover']::slotted([active]) {
                   background-color: rgba(255, 255, 255, 0.1);
                 }
-                #popover::slotted([selected]) {
+                slot[name='popover']::slotted([selected]) {
                   background-color: rgba(255, 255, 255, 0.2);
                 }
-                #popover::slotted([active][selected]) {
+                slot[name='popover']::slotted([active][selected]) {
                   background-color: rgba(255, 255, 255, 0.3);
                 }
               </style>
-              <input
-                id="input"
-                part="placeholder"
-                type="button"
-                popovertarget="popover"
-                inert
-              />
-              <slot id="picked" name="picked" part="picked"></slot>
+              <input type="button" inert part="placeholder" />
+              <slot name="picked" part="picked"></slot>
               <slot></slot>
-              <slot
-                id="popover"
-                name="popover"
-                part="popover"
-                popover="auto"
-              ></slot>
+              <slot name="popover" popover="auto" part="popover"></slot>
             </template>
             <ipe-option slot="picked" value="apple">Apple</ipe-option>
             <ipe-option slot="picked" value="banana">Banana</ipe-option>
             <ipe-option slot="picked" value="cranberry">Cranberry</ipe-option>
             <ipe-option slot="picked" value="date">Date</ipe-option>
             <ipe-option slot="picked" value="endive">Endive</ipe-option>
-            <ipe-option slot="popover" value="apple">Apple</ipe-option>
+            <ipe-option slot="popover" value="apple" selected>Apple</ipe-option>
             <ipe-option slot="popover" value="banana">Banana</ipe-option>
-            <ipe-option slot="popover" value="cranberry">Cranberry</ipe-option>
-            <ipe-option slot="popover" value="date">Date</ipe-option>
+            <ipe-option slot="popover" value="cranberry" selected
+              >Cranberry</ipe-option
+            >
+            <ipe-option slot="popover" value="date" disabled>Date</ipe-option>
             <ipe-option slot="popover" value="endive">Endive</ipe-option>
+          </ipe-combobox>
+        </p>
+        <p>
+          <label for="capacity">Select Capacity:</label>
+          <ipe-combobox id="capacity" disabled>
+            <ipe-option slot="picked" value="1">One</ipe-option>
+            <ipe-option slot="picked" value="2">Two</ipe-option>
+            <ipe-option slot="picked" value="3">Three</ipe-option>
+            <ipe-option slot="picked" value="4+">Four+</ipe-option>
+            <ipe-option slot="popover" value="1">One</ipe-option>
+            <ipe-option slot="popover" value="2">Two</ipe-option>
+            <ipe-option slot="popover" value="3">Three</ipe-option>
+            <ipe-option slot="popover" value="4+" selected>Four+</ipe-option>
           </ipe-combobox>
         </p>
         <p>
