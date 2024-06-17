@@ -122,9 +122,7 @@ export class IpeOptionElement extends IpeElement implements HTMLValueOption {
   }
 
   protected disabledUpdated(): void {
-    const disabled = this.disabled ? 'true' : 'false';
-    this.inert = this.disabled;
-    this._internals.ariaDisabled = disabled ? 'true' : 'false';
+    this._internals.ariaDisabled = this.disabled ? 'true' : 'false';
   }
 
   protected selectedUpdated(): void {

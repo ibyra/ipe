@@ -77,7 +77,7 @@ export class IpeComboboxElement
       cursor: pointer;
     }
 
-    #input {
+    input {
       box-sizing: border-box;
       position: absolute;
       display: block;
@@ -96,7 +96,7 @@ export class IpeComboboxElement
       cursor: pointer;
     }
 
-    #picked {
+    slot[name='picked'] {
       box-sizing: border-box;
       position: absolute;
       display: flex;
@@ -114,16 +114,16 @@ export class IpeComboboxElement
       color: currentColor;
       pointer-events: none;
     }
-    #picked::slotted(*) {
+    slot[name='picked']::slotted(*) {
       display: none;
       border: 0;
       font-size: 1em;
     }
-    #picked::slotted([selected]) {
+    slot[name='picked']::slotted([selected]) {
       display: unset;
     }
 
-    #popover {
+    slot[name='popover'] {
       display: hidden;
       box-sizing: border-box;
       margin: 0;
@@ -131,35 +131,29 @@ export class IpeComboboxElement
       padding: 0;
       background-color: white;
     }
-    #popover:popover-open {
+    slot[name='popover']:popover-open {
       display: unset;
     }
-    #popover::slotted(*) {
+    slot[name='popover']::slotted(*) {
       border: 0;
       cursor: pointer;
     }
-    #popover::slotted([active]) {
+    slot[name='popover']::slotted([active]) {
       background-color: rgba(255, 255, 255, 0.1);
     }
-    #popover::slotted([selected]) {
+    slot[name='popover']::slotted([selected]) {
       background-color: rgba(255, 255, 255, 0.2);
     }
-    #popover::slotted([active][selected]) {
+    slot[name='popover']::slotted([active][selected]) {
       background-color: rgba(255, 255, 255, 0.3);
     }
   `;
 
   static override template = html`
-    <input
-      id="input"
-      part="placeholder"
-      type="button"
-      popovertarget="popover"
-      inert
-    />
-    <slot id="picked" name="picked" part="picked"></slot>
+    <input type="button" inert part="placeholder" />
+    <slot name="picked" part="picked"></slot>
     <slot></slot>
-    <slot id="popover" name="popover" part="popover" popover="auto"></slot>
+    <slot name="popover" popover="auto" part="popover"></slot>
   `;
 
   public declare open: boolean;
@@ -210,35 +204,21 @@ export class IpeComboboxElement
     this._defaultShift = this.shift;
     this._defaultPlacement = this.placement;
     this._defaultPlaceholder = this.placeholder;
-
     this._internals.ariaHasPopup = 'true';
-    if (!this.hasAttribute('aria-haspopup')) {
-      this._internals.ariaHasPopup = 'true';
-    }
-
     this.addEventListener('click', this.handleClick);
     this.updatePicked();
 
-    const inputElement = this.inputElement;
-    if (inputElement != null) {
-      this.subscribe(inputElement, 'click', this.handleInputClick);
-    }
-
-    const popoverSlot = this.popoverSlot;
-    if (popoverSlot != null) {
-      this.subscribe(popoverSlot, 'slotchange', this.handlePopoverSlotChange);
-      this.subscribe(
-        popoverSlot,
-        'beforetoggle',
-        this.handlePopoverBeforetoggle,
-      );
-      this.subscribe(popoverSlot, 'toggle', this.handlePopoverToggle);
-    }
-
-    const pickedSlot = this.pickedSlot;
-    if (pickedSlot != null) {
-      this.subscribe(pickedSlot, 'slotchange', this.handlePickedSlotChange);
-    }
+    const input = this.inputElement!;
+    const popover = this.popoverSlot!;
+    const picked = this.pickedSlot!;
+    input.popoverTargetElement = popover;
+    input.popoverTargetAction = 'toggle';
+    popover.popover = 'auto';
+    this.subscribe(input, 'click', this.handleInputClick);
+    this.subscribe(popover, 'slotchange', this.handlePopoverSlotChange);
+    this.subscribe(popover, 'beforetoggle', this.handlePopoverBeforetoggle);
+    this.subscribe(popover, 'toggle', this.handlePopoverToggle);
+    this.subscribe(picked, 'slotchange', this.handlePickedSlotChange);
   }
 
   override disconnectedCallback(): void {
@@ -246,26 +226,14 @@ export class IpeComboboxElement
     this.removeEventListener('click', this.handleClick);
     this.updatePicked();
 
-    const inputElement = this.inputElement;
-    if (inputElement != null) {
-      this.unsubscribe(inputElement, 'click', this.handleInputClick);
-    }
-
-    const popoverSlot = this.popoverSlot;
-    if (popoverSlot != null) {
-      this.unsubscribe(popoverSlot, 'slotchange', this.handlePopoverSlotChange);
-      this.unsubscribe(
-        popoverSlot,
-        'beforetoggle',
-        this.handlePopoverBeforetoggle,
-      );
-      this.unsubscribe(popoverSlot, 'toggle', this.handlePopoverToggle);
-    }
-
-    const pickedSlot = this.pickedSlot;
-    if (pickedSlot != null) {
-      this.unsubscribe(pickedSlot, 'slotchange', this.handlePickedSlotChange);
-    }
+    const input = this.inputElement!;
+    const popover = this.popoverSlot!;
+    const picked = this.pickedSlot!;
+    this.unsubscribe(input, 'click', this.handleInputClick);
+    this.unsubscribe(popover, 'slotchange', this.handlePopoverSlotChange);
+    this.unsubscribe(popover, 'beforetoggle', this.handlePopoverBeforetoggle);
+    this.unsubscribe(popover, 'toggle', this.handlePopoverToggle);
+    this.unsubscribe(picked, 'slotchange', this.handlePickedSlotChange);
     this.updatePosition();
   }
 
@@ -350,6 +318,13 @@ export class IpeComboboxElement
     return super.updated(props);
   }
 
+  protected override disabledUpdated(): void {
+    super.disabledUpdated();
+    for (const pick of this._picked) {
+      pick.disabled = this.disabled;
+    }
+  }
+
   protected openUpdated(): void {
     this._internals.ariaExpanded = this.open ? 'true' : 'false';
   }
@@ -383,7 +358,9 @@ export class IpeComboboxElement
     super.optionsUpdated(oldValue);
     for (const pick of this._picked) {
       const option = this._options.find((o) => o.value === pick.value);
-      pick.selected = option?.selected ?? false;
+      if (option == null) continue;
+      pick.selected = option.selected;
+      pick.disabled = option.disabled;
     }
   }
 
@@ -395,11 +372,13 @@ export class IpeComboboxElement
     }
 
     for (const pick of this._picked) {
-      const option = this._options.find((o) => o.value === pick.value);
-      pick.selected = option?.selected ?? false;
       this.subscribe(pick, 'beforetoggle', this.handlePickedBeforeToggle);
       this.subscribe(pick, 'toggle', this.handlePickedToggle);
       this.subscribe(pick, 'change', this.handlePickedChange);
+      const option = this._options.find((o) => o.value === pick.value);
+      if (option == null) continue;
+      pick.selected = option.selected;
+      pick.disabled = option.disabled;
     }
   }
 

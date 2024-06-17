@@ -154,7 +154,7 @@ export class IpeDisclosureElement extends IpeElement implements HTMLDisclosure {
 
   protected idUpdated(): void {
     for (const element of this._buttons) {
-      if (this.id === '') {
+      if (this.id === '' || this.id == null) {
         element.removeAttribute('aria-controls');
       } else {
         element.setAttribute('aria-controls', this.id);
@@ -164,7 +164,7 @@ export class IpeDisclosureElement extends IpeElement implements HTMLDisclosure {
 
   protected disabledUpdated(): void {
     this._internals.ariaDisabled = this.disabled ? 'true' : 'false';
-    for (const button of this.buttons) {
+    for (const button of this._buttons) {
       button.disabled = this.disabled;
     }
   }
@@ -179,7 +179,7 @@ export class IpeDisclosureElement extends IpeElement implements HTMLDisclosure {
     if (this.open) {
       this.toggleAttribute('open', true);
       const endHeight = `${this.offsetHeight}px`;
-      for (const element of this.buttons) {
+      for (const element of this._buttons) {
         element.ariaExpanded = 'true';
       }
       this._internals.states.add('opening');
@@ -190,7 +190,7 @@ export class IpeDisclosureElement extends IpeElement implements HTMLDisclosure {
       this.subscribe(this._animation, 'cancel', this.handleOpenAnimationEnd);
       this.subscribe(this._animation, 'finish', this.handleOpenAnimationEnd);
     } else {
-      for (const element of this.buttons) {
+      for (const element of this._buttons) {
         element.ariaExpanded = 'false';
       }
       const summary = this.summarySlot!;
@@ -210,20 +210,20 @@ export class IpeDisclosureElement extends IpeElement implements HTMLDisclosure {
   }
 
   protected buttonsUpdated(oldValue: ReadonlyArray<HTMLButton>): void {
-    for (const element of oldValue) {
-      this.unsubscribe(element, 'click', this.handleButtonClick);
-      element.ariaExpanded = null;
-      element.removeAttribute('aria-controls');
+    for (const button of oldValue) {
+      this.unsubscribe(button, 'click', this.handleButtonClick);
+      button.ariaExpanded = null;
+      button.removeAttribute('aria-controls');
     }
 
-    for (const element of this._buttons) {
-      this.subscribe(element, 'click', this.handleButtonClick);
-      element.disabled = this.disabled;
-      element.ariaExpanded = this.open ? 'true' : 'false';
-      if (this.id === '') {
-        element.removeAttribute('aria-controls');
+    for (const button of this._buttons) {
+      this.subscribe(button, 'click', this.handleButtonClick);
+      button.ariaExpanded = this.open ? 'true' : 'false';
+      if (this.disabled) button.disabled = true;
+      if (this.id === '' || this.id == null) {
+        button.removeAttribute('aria-controls');
       } else {
-        element.setAttribute('aria-controls', this.id);
+        button.setAttribute('aria-controls', this.id);
       }
     }
   }
