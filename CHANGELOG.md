@@ -1,5 +1,11 @@
 # @ibyra/ipe
 
+## 0.0.8
+
+### Patch Changes
+
+- 4a3aecc: Prevent selection/opening of disabled options/disclosures
+
 ## 0.0.7
 
 ### Patch Changes
