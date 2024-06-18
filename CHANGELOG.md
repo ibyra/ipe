@@ -1,5 +1,11 @@
 # @ibyra/ipe
 
+## 0.0.9
+
+### Patch Changes
+
+- c3dfb78: Prevent option toggle on disabled lists
+
 ## 0.0.8
 
 ### Patch Changes
