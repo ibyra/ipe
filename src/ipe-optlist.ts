@@ -359,11 +359,11 @@ export class IpeOptlistElement
   }
 
   protected canSelect(): boolean {
-    return !this.readOnly;
+    return !this.readOnly && !this.disabled;
   }
 
   protected canDeselect(): boolean {
-    if (this.readOnly) return false;
+    if (this.readOnly || this.disabled) return false;
     if (!this.required) return true;
     return this.selectedOptions.length > 1;
   }
